@@ -1,7 +1,7 @@
 const CACHE_NAME = 'dashboard-pwa-v1';
 const ASSETS = [
   './',
-  './dashboard.html',
+  './index.html',
   './data.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
@@ -30,7 +30,7 @@ self.addEventListener('fetch', event => {
         const copy = resp.clone();
         caches.open(CACHE_NAME).then(cache => cache.put(req, copy)).catch(() => {});
         return resp;
-      }).catch(() => caches.match('./dashboard.html'));
+      }).catch(() => caches.match('./index.html'));
     })
   );
 });

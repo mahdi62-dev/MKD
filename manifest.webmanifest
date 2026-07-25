@@ -1,7 +1,7 @@
 {
-  "name": "Crypto & Gold Dashboard",
-  "short_name": "Dashboard",
-  "start_url": "./dashboard.html",
+  "name": "MKD",
+  "short_name": "MKD",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0a0e14",
   "theme_color": "#0a0e14",

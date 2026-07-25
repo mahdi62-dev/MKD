@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>داشبورد پیش‌بینی هفتگی | Crypto & Gold — XGBoost</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#0a0e14">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Crypto & Gold">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
+<style>
+:root{
+  --bg:#0a0e14; --panel:#101827; --panel2:#0d1420; --border:#1e2a3d; --border2:#263449;
+  --text:#e6ecf5; --muted:#8b98ad; --muted2:#64748b;
+  --cyan:#22d3ee; --green:#34d399; --red:#f87171; --amber:#fbbf24; --blue:#60a5fa; --violet:#a78bfa;
+  --buy:#00e676; --sell:#ff1744; --none:#ffc400;
+  --radius:14px; --shadow:0 6px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html{scrollbar-color:var(--border2) var(--bg)}
+body{background:var(--bg); color:var(--text); font-family:Tahoma,"Segoe UI",Arial,sans-serif; font-size:14px; line-height:1.7}
+::-webkit-scrollbar{width:9px;height:9px} ::-webkit-scrollbar-thumb{background:#243349;border-radius:8px} ::-webkit-scrollbar-track{background:transparent}
+a{color:var(--cyan); text-decoration:none}
+bdi{unicode-bidi:isolate}
+.num{font-variant-numeric:tabular-nums; direction:ltr; unicode-bidi:isolate}
+.num:not(td):not(th){display:inline-block}
+td.num,th.num{display:table-cell; text-align:center} /* v2.4 FIX: .num روی td نباید inline-block شود؛ وگرنه جدول می‌شکند و هدرها از روی اعداد می‌افتند */
+.muted{color:var(--muted)} .pos{color:var(--green)} .neg{color:var(--red)} .neu{color:var(--muted)}
+.wrap{max-width:1460px; margin:0 auto; padding:0 18px 60px}
+
+/* ───── top bar ───── */
+.topbar{position:sticky; top:0; z-index:60; background:linear-gradient(180deg,#0e1625ee,#0b111cd9); backdrop-filter:blur(10px); border-bottom:1px solid var(--border)}
+.topbar-in{max-width:1460px; margin:0 auto; padding:10px 18px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px}
+.brand{display:flex; align-items:center; gap:11px}
+.brand .logo{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#164e63,#155e75);border:1px solid #1e6d7d55}
+.brand h1{font-size:16.5px; font-weight:700; letter-spacing:.2px}
+.brand .sub{font-size:11px; color:var(--muted); margin-top:-3px}
+.chips{display:flex; flex-wrap:wrap; gap:7px; align-items:center}
+.chip{background:var(--panel); border:1px solid var(--border); border-radius:999px; padding:3px 12px; font-size:11.5px; color:var(--muted); white-space:nowrap}
+.chip b{color:var(--text); font-weight:600}
+.chip.demo{background:#3b2f0b; border-color:#8a6d1f; color:#f7d774}
+.livebox{margin-inline-start:auto; display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#4b5563;display:inline-block}
+.dot.on{background:var(--green); box-shadow:0 0 8px #34d39988; animation:pulse 2s infinite}
+.dot.busy{background:var(--amber); box-shadow:0 0 8px #fbbf2488}
+.dot.off{background:#4b5563}
+@keyframes pulse{50%{opacity:.5}}
+select,input[type=text]{background:var(--panel2); color:var(--text); border:1px solid var(--border2); border-radius:9px; padding:6px 10px; font-family:inherit; font-size:12.5px; outline:none}
+select:focus,input[type=text]:focus{border-color:var(--cyan)}
+.btn{background:linear-gradient(135deg,#0e7490,#155e75); color:#eafcff;border:1px solid #1697b455;border-radius:9px; padding:6px 14px; font-family:inherit; font-size:12.5px; cursor:pointer; transition:.15s}
+.btn:hover{filter:brightness(1.18)}
+.btn.ghost{background:var(--panel2); color:var(--text); border-color:var(--border2)}
+.btn.ghost:hover{border-color:var(--cyan); color:var(--cyan)}
+.btn.ghost:disabled{opacity:.45; cursor:default}
+.btn.sm{padding:3px 10px; font-size:11.5px; border-radius:8px}
+.btn.buy{background:linear-gradient(135deg,#047857,#065f46); border-color:#10b98155}
+.btn.sell{background:linear-gradient(135deg,#b91c1c,#7f1d1d); border-color:#f8717155}
+.switch{position:relative; width:38px; height:21px; display:inline-block; vertical-align:middle}
+.switch input{opacity:0;width:0;height:0}
+.sl{position:absolute; inset:0; background:#263244; border-radius:999px; transition:.2s; cursor:pointer}
+.sl:before{content:""; position:absolute; width:15px; height:15px; border-radius:50%; background:#94a3b8; top:3px; inset-inline-start:3px; transition:.2s}
+.switch input:checked + .sl{background:#0e7490}
+.switch input:checked + .sl:before{transform:translateX(-17px); background:#fff}
+.sw-label{font-size:11.5px; color:var(--muted)}
+
+/* ───── demo banner ───── */
+.demo-banner{background:linear-gradient(90deg,#3b2f0b,#4a3a10); border:1px solid #8a6d1f; color:#f7d774; border-radius:10px; padding:8px 14px; margin:12px 0 0; font-size:12.5px; display:flex; justify-content:space-between; align-items:center; gap:10px}
+.demo-banner button{background:none; border:none; color:#f7d774; cursor:pointer; font-size:15px}
+
+/* ───── ticker ───── */
+.ticker{margin-top:12px; border:1px solid var(--border); background:var(--panel2); border-radius:11px; overflow:hidden; position:relative; height:38px; display:flex; align-items:center}
+.ticker::before,.ticker::after{content:""; position:absolute; top:0; bottom:0; width:60px; z-index:2; pointer-events:none}
+.ticker::before{inset-inline-start:0; background:linear-gradient(to right,var(--panel2),transparent)}
+.ticker::after{inset-inline-end:0; background:linear-gradient(to left,var(--panel2),transparent)}
+.ticker-track{display:inline-flex; gap:34px; white-space:nowrap; padding-inline-start:20px; animation:tickmove 70s linear infinite; will-change:transform}
+.ticker:hover .ticker-track{animation-play-state:paused}
+@keyframes tickmove{to{transform:translateX(50%)}}
+.tk{display:inline-flex; gap:7px; align-items:baseline; font-size:12.5px}
+.tk .s{color:var(--muted); font-weight:600}
+
+/* ───── KPI cards ───── */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:13px; margin-top:14px}
+.kpi{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); position:relative; overflow:hidden}
+.kpi::after{content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:3px; background:var(--accent,#334155)}
+.kpi .t{font-size:11.5px; color:var(--muted)}
+.kpi .v{font-size:23px; font-weight:700; margin-top:4px; font-variant-numeric:tabular-nums}
+.kpi .s{font-size:11px; color:var(--muted2); margin-top:2px}
+.kpi.g{--accent:var(--green)} .kpi.r{--accent:var(--red)} .kpi.c{--accent:var(--cyan)} .kpi.a{--accent:var(--amber)} .kpi.b{--accent:var(--blue)} .kpi.buyk{--accent:var(--buy)} .kpi.sellk{--accent:var(--sell)}
+
+/* ───── tabs ───── */
+.tabs{display:flex; gap:6px; margin-top:22px; border-bottom:1px solid var(--border); flex-wrap:wrap}
+.tab-btn{background:none; border:none; color:var(--muted); font-family:inherit; font-size:13.5px; font-weight:600; padding:9px 16px; cursor:pointer; border-bottom:2.5px solid transparent; margin-bottom:-1px}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--cyan); border-bottom-color:var(--cyan)}
+.tab-btn .cnt{font-size:11px; background:#1c2942; border-radius:8px; padding:1px 7px; margin-inline-start:4px}
+.tab-panel{display:none; margin-top:16px}
+.tab-panel.active{display:block}
+.card{background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px}
+.card h3{font-size:14px; margin-bottom:12px; display:flex; align-items:center; gap:8px}
+.card h3::before{content:""; width:8px; height:8px; border-radius:2px; background:var(--cyan); display:inline-block}
+
+/* ───── controls ───── */
+.ctrl-row{display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin-bottom:12px}
+.ctrl-row .sp{flex:1}
+.seg{display:inline-flex; border:1px solid var(--border2); border-radius:9px; overflow:hidden}
+.seg button{background:var(--panel2); color:var(--muted); border:none; padding:6px 13px; font-family:inherit; font-size:12px; cursor:pointer}
+.seg button.on{background:#0e7490; color:#fff}
+.qchip{cursor:pointer}
+.legend{display:flex; gap:16px; font-size:11.5px; color:var(--muted); flex-wrap:wrap; margin:4px 0 8px}
+.lg{display:inline-flex; align-items:center; gap:6px}
+.ln{width:22px; height:0; border-top:2.5px solid; display:inline-block; border-radius:2px}
+.ln.a{border-color:var(--cyan)} .ln.b{border-color:var(--amber); border-top-style:dashed} .ln.f{border-color:var(--green)} .ln.t{border-color:var(--red); border-top-style:dashed}
+.ln.shl{border-color:var(--sell); border-top-style:dotted} .ln.lhl{border-color:var(--buy); border-top-style:dotted}
+.mkLg{width:11px; height:11px; display:inline-block; border-radius:50%}
+#chartWrap,#intraWrap{position:relative; background:var(--panel2); border:1px solid var(--border); border-radius:12px; padding:6px}
+#chartWrap svg,#intraWrap svg{width:100%; height:auto; display:block}
+#chartTip,#intraTip{position:absolute; pointer-events:none; background:#0b1220f2; border:1px solid var(--border2); border-radius:9px; padding:7px 11px; font-size:11.5px; line-height:1.9; display:none; z-index:5; min-width:160px; box-shadow:0 8px 20px rgba(0,0,0,.5)}
+.stats-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(132px,1fr)); gap:9px; margin-top:12px}
+.stat{background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:9px 12px}
+.stat .t{font-size:10.5px; color:var(--muted)} .stat .v{font-size:15px; font-weight:700; margin-top:2px}
+.bandchip{font-size:11px; border-radius:7px; padding:3px 10px; border:1px solid var(--border2); background:var(--panel2); white-space:nowrap}
+.bandchip b{font-weight:700}
+.bc-sell{border-color:#7f1d1d; color:#fca5a5} .bc-buy{border-color:#065f46; color:#6ee7b7}
+
+/* ───── table ───── */
+.tbl-wrap{overflow:auto; border:1px solid var(--border); border-radius:12px; max-height:660px}
+table{border-collapse:collapse; width:100%; font-size:12px}
+thead th{position:sticky; top:0; background:#131e30; color:var(--muted); font-size:11px; padding:9px 9px; text-align:start; cursor:pointer; user-select:none; white-space:nowrap; border-bottom:1px solid var(--border2); z-index:2}
+thead th:hover{color:var(--cyan)}
+tbody td{padding:7px 9px; border-bottom:1px solid #16202f; white-space:nowrap}
+#futureTable th,#futureTable td{text-align:center; padding:9px 6px} /* v2.4: هدر دقیقاً روی اعداد، همه وسط */
+tbody tr:hover{background:#15203266; cursor:pointer}
+tbody tr:nth-child(even){background:#0e162422}
+.sym-cell{font-weight:700; color:var(--text)}
+.ttype{font-size:10.5px; border-radius:6px; padding:2px 8px; border:1px solid}
+.tt-crypto{color:var(--cyan); border-color:#155e75; background:#164e6326}
+.tt-commodity{color:var(--amber); border-color:#92600e; background:#78350f26}
+.tt-ratio{color:var(--violet); border-color:#6d5bb7; background:#5b4bb726}
+.sig{font-size:10.5px; font-weight:700; border-radius:6px; padding:2px 9px; white-space:nowrap}
+.sig-sg{color:#052e16; background:var(--green)} .sig-g{color:var(--green); background:#34d39922}
+.sig-sr{color:#450a0a; background:var(--red)} .sig-r{color:var(--red); background:#f8717122}
+.sig-n{color:var(--muted); background:#64748b22}
+.sig-buy{color:#031b0e; background:var(--buy)} .sig-sell{color:#2a0208; background:var(--sell)} .sig-none{color:#3a2e00; background:var(--none)}
+.hl-buy{background:#00e67614} .hl-sell{background:#ff174414}
+
+/* ───── ranking ───── */
+.rank-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); gap:13px}
+.bar-row{display:grid; grid-template-columns:96px 1fr 76px; gap:10px; align-items:center; padding:6px 4px; border-bottom:1px dashed #1a2636; cursor:pointer}
+.bar-row:hover .bl{color:var(--cyan)}
+.bl{font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.bt{height:13px; background:#151f30; border-radius:7px; overflow:hidden}
+.bf{height:100%; border-radius:7px; min-width:2px; transition:width .5s}
+.bv{font-size:12px; font-weight:700; text-align:end}
+
+/* ───── alerts ───── */
+.alert-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(255px,1fr)); gap:12px; margin-top:12px}
+.acard{background:var(--panel2); border:1px solid var(--border2); border-radius:12px; padding:13px 15px; cursor:pointer; transition:.15s}
+.acard:hover{transform:translateY(-2px); border-color:var(--cyan)}
+.acard .hh{display:flex; justify-content:space-between; align-items:center; margin-bottom:7px}
+.acard .pct{font-size:21px; font-weight:800; font-variant-numeric:tabular-nums}
+.acard .ft{font-size:10.5px; color:var(--muted2); margin-top:7px; border-top:1px dashed var(--border); padding-top:6px}
+input[type=range]{accent-color:var(--cyan); width:190px; vertical-align:middle}
+
+/* ───── misc ───── */
+.empty{text-align:center; padding:60px 20px; color:var(--muted)}
+.empty pre{direction:ltr; text-align:left; background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:14px; overflow:auto; font-size:12px; margin:14px auto; max-width:760px; color:#a5f3fc}
+.note{background:#0e1626; border:1px dashed var(--border2); border-radius:10px; padding:10px 14px; font-size:11.5px; color:var(--muted); margin-top:10px; line-height:1.9}
+#toasts{position:fixed; left:16px; bottom:16px; z-index:100; display:flex; flex-direction:column; gap:8px}
+.toast{background:#0e1a2a; border:1px solid var(--border2); border-inline-start:3px solid var(--cyan); color:var(--text); border-radius:10px; padding:9px 15px; font-size:12.5px; box-shadow:0 8px 24px rgba(0,0,0,.5); animation:tin .25s; max-width:340px}
+.toast.warn{border-inline-start-color:var(--amber)} .toast.err{border-inline-start-color:var(--red)} .toast.ok{border-inline-start-color:var(--green)}
+@keyframes tin{from{transform:translateY(12px); opacity:0}}
+.filetree{direction:ltr; text-align:left; background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:14px; overflow:auto; font-size:12.5px; color:#a5f3fc; font-family:Consolas,monospace}
+.help-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:13px}
+.help-grid ol{padding-inline-start:20px; color:var(--muted); font-size:12.5px}
+.help-grid li{margin-bottom:6px}
+code.k{background:#1a2436; border-radius:5px; padding:1px 7px; font-size:11.5px; color:#a5f3fc; direction:ltr; unicode-bidi:isolate; display:inline-block}
+@media(max-width:860px){ .livebox{margin-inline-start:0} .brand h1{font-size:14.5px} }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <div class="logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 17l5-6 4 4 6-8" stroke="#22d3ee" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h3v3" stroke="#34d399" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <h1>داشبورد پیش‌بینی هفتگی کریپتو و طلا</h1>
+        <div class="sub">XGBoost • yfR • سیگنال Buy/Sell هفته جاری • بروزرسانی ساعتی</div>
+      </div>
+    </div>
+    <div class="chips" id="metaChips"></div>
+    <div class="livebox">
+      <span class="dot" id="liveDot"></span>
+      <span class="sw-label" id="liveStatus">قیمت زنده: —</span>
+      <span class="chip" id="countdown" title="زمان تا بروزرسانی خودکار بعدی">--:--</span>
+      <select id="intervalSel" title="بازه بروزرسانی قیمت‌ها">
+        <option value="15">۱۵ دقیقه</option>
+        <option value="30">۳۰ دقیقه</option>
+        <option value="60" selected>۱ ساعت</option>
+        <option value="120">۲ ساعت</option>
+      </select>
+      <label class="sw-label" title="دریافت خودکار قیمت‌های زنده">
+        <span class="switch"><input type="checkbox" id="liveToggle" checked><span class="sl"></span></span>
+        زنده
+      </label>
+      <button class="btn" id="refreshBtn">⟳ بروزرسانی</button>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="demo-banner" id="demoBanner" style="display:none">
+    <span>⚠ <b>داده نمایشی (Demo)</b> — این اعداد فقط برای پیش‌نمایش هستند. برای داده واقعی، اسکریپت <code class="k">export_dashboard.R</code> را اجرا کنید تا فایل <code class="k">data.js</code> کنار داشبورد ساخته شود.</span>
+    <button onclick="this.parentElement.style.display='none'">✕</button>
+  </div>
+  <div class="demo-banner" id="dataWarn" style="display:none; background:linear-gradient(90deg,#450a0a,#5b1212); border-color:#b91c1c; color:#fca5a5">
+    <span>🛑 <b>ردیف‌های پیش‌بینی آینده (۱۵ هفته) در داده نیست!</b> یعنی در اجرای R شما تابع <code class="k">load_and_predict</code> برای همه نمادها خطا خورده (در کنسول R دنبال <code class="k">Error in prediction</code> بگردید) یا نسخه قدیمی <code class="k">export_dashboard.R</code> را دارید — نسخه جدید را جایگذاری و دوباره اجرا کنید.</span>
+    <button onclick="this.parentElement.style.display='none'">✕</button>
+  </div>
+
+  <div class="ticker" title="قیمت‌های زنده (به‌همراه تغییر ۲۴ ساعته) — نوسان‌گرترین‌ها اول"><div class="ticker-track" id="tickerTrack"></div></div>
+
+  <div class="kpis">
+    <div class="kpi c"><div class="t">نمادهای فعال</div><div class="v num" id="kpiCount">—</div><div class="s" id="kpiCountS">—</div></div>
+    <div class="kpi b"><div class="t">میانگین MAPE مدل (تست)</div><div class="v num" id="kpiMape">—</div><div class="s" id="kpiMapeS">—</div></div>
+    <div class="kpi g"><div class="t">بیشترین رشد پیش‌بینی‌شده (۱۵ هفته)</div><div class="v" id="kpiBest">—</div><div class="s" id="kpiBestS">—</div></div>
+    <div class="kpi r"><div class="t">بیشترین ریزش پیش‌بینی‌شده (۱۵ هفته)</div><div class="v" id="kpiWorst">—</div><div class="s" id="kpiWorstS">—</div></div>
+    <div class="kpi buyk"><div class="t">سیگنال‌های Buy (هفته جاری)</div><div class="v num" id="kpiBuy" style="color:var(--buy)">—</div><div class="s" id="kpiBuyS">قیمت در ناحیه LL–LH</div></div>
+    <div class="kpi sellk"><div class="t">سیگنال‌های Sell (هفته جاری)</div><div class="v num" id="kpiSell" style="color:var(--sell)">—</div><div class="s" id="kpiSellS">قیمت در ناحیه SL–SH</div></div>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="chart">📈 نمودار</button>
+    <button class="tab-btn" data-tab="sigbuy">🟢 سیگنال‌های Buy <span class="cnt" id="buyCnt"></span></button>
+    <button class="tab-btn" data-tab="sigsell">🔴 سیگنال‌های Sell <span class="cnt" id="sellCnt"></span></button>
+    <button class="tab-btn" data-tab="table">📋 جدول ارزها</button>
+    <button class="tab-btn" data-tab="ranking">🏆 رتبه‌بندی</button>
+    <button class="tab-btn" data-tab="alerts">⚡ هشدارها <span class="cnt" id="alertBadge"></span></button>
+    <button class="tab-btn" data-tab="help">⬇ دانلود و راهنما</button>
+  </nav>
+
+  <!-- ═══ CHART ═══ -->
+  <section class="tab-panel active" id="tab-chart">
+    <div class="card">
+      <div class="ctrl-row">
+        <input type="text" id="symSearch" placeholder="🔎 جستجوی نماد… (مثلاً BTC)" style="width:210px">
+        <select id="symSel" style="min-width:190px"></select>
+        <span id="quickChips"></span>
+        <span class="sp"></span>
+        <span class="seg">
+          <button id="rangeAll" class="on" title="۵ سال گذشته تا امروز + پیش‌بینی">۵ سال اخیر</button>
+          <button id="range15">۱۵ هفته قبل و بعد</button>
+        </span>
+        <button class="btn ghost sm" id="svgBtn">⬇ SVG</button>
+      </div>
+      <div class="legend">
+        <span class="lg"><i class="ln a"></i> واقعی (بک‌تست)</span>
+        <span class="lg"><i class="ln b"></i> پیش‌بینی (بک‌تست)</span>
+        <span class="lg"><i class="ln f"></i> پیش‌بینی آینده (۱۵ هفته)</span>
+        <span class="lg"><i class="ln shl"></i> ناحیه فروش SH–SL</span>
+        <span class="lg"><i class="ln lhl"></i> ناحیه خرید LL–LH</span>
+        <span class="lg"><i class="ln t"></i> امروز</span>
+      </div>
+      <div id="chartWrap"><div id="chartTip"></div></div>
+      <div class="stats-row" id="chartStats"></div>
+    </div>
+
+    <!-- نمودار ساعتی هفته جاری -->
+    <div class="card" style="margin-top:13px">
+      <h3>⏱ نمودار ساعتی هفته جاری + سیگنال‌های سیشن (هر ۴ ساعت)</h3>
+      <div class="ctrl-row" id="bandChips"></div>
+      <div id="priceGauge" style="margin:4px 0 10px"></div>
+      <div class="legend">
+        <span class="lg"><i class="ln a"></i> قیمت ساعتی</span>
+        <span class="lg"><span class="mkLg" style="background:var(--buy)"></span> Buy</span>
+        <span class="lg"><span class="mkLg" style="background:var(--sell)"></span> Sell</span>
+        <span class="lg"><span class="mkLg" style="background:var(--none)"></span> Don't Act</span>
+        <span class="lg"><i class="ln shl"></i> ناحیه فروش</span>
+        <span class="lg"><i class="ln lhl"></i> ناحیه خرید</span>
+        <span class="lg"><span class="mkLg" style="background:var(--panel2); border:2px dashed var(--cyan)"></span> پیش‌نمایش آینده</span>
+      </div>
+      <div class="note" style="margin-top:0; margin-bottom:8px">سیگنال‌ها بر اساس قیمت در لحظات وسط سیشن‌ها (UTC): آسیا ۰۰ و ۰۴ • اروپا ۰۸ و ۱۲ • آمریکا ۱۶ و ۲۰ — سه روز گذشته (توپُر) + پیش‌نمایش ۲۴ ساعت آینده با قیمت فعلی (توخالی ⏳). مثلث سبز ▲ = Buy • قرمز ▼ = Sell • زرد ● = Don't Act. نقاط ریز رنگی = سیگنال ساعت‌های میانی.</div>
+      <div id="intraWrap"><div class="empty">در حال دریافت داده ساعتی…</div><div id="intraTip"></div></div>
+      <div class="tbl-wrap" style="max-height:300px; margin-top:10px"><table id="sessionTable"></table></div>
+    </div>
+
+    <div class="card" style="margin-top:13px">
+      <h3>پیش‌بینی OHLC برای ۱۵ هفته آینده</h3>
+      <div class="tbl-wrap" style="max-height:420px"><table id="futureTable"></table></div>
+    </div>
+  </section>
+
+  <!-- ═══ BUY SIGNALS ═══ -->
+  <section class="tab-panel" id="tab-sigbuy">
+    <div class="card">
+      <div class="ctrl-row">
+        <h3 style="margin:0; color:var(--buy)">🟢 شیت سیگنال‌های Buy</h3>
+        <span class="muted" style="font-size:12px">قیمت داخل ناحیه خرید [LL , LH] هفته جاری — سورت: Vol/MktCap ٪ سپس تغییر ۲۴ ساعته</span>
+        <span class="sp"></span>
+        <input type="text" id="qBuy" placeholder="🔎 جستجو…" style="width:150px">
+        <button class="btn buy sm" id="xlsxBuyBtn">⬇ اکسل Buy</button>
+        <button class="btn ghost sm" id="xlsxBothBtn1">⬇ اکسل Buy+Sell</button>
+      </div>
+      <div class="tbl-wrap"><table id="buyTable"><thead></thead><tbody></tbody></table></div>
+      <div class="note" id="buyNote"></div>
+    </div>
+  </section>
+
+  <!-- ═══ SELL SIGNALS ═══ -->
+  <section class="tab-panel" id="tab-sigsell">
+    <div class="card">
+      <div class="ctrl-row">
+        <h3 style="margin:0; color:var(--sell)">🔴 شیت سیگنال‌های Sell</h3>
+        <span class="muted" style="font-size:12px">قیمت داخل ناحیه فروش [SL , SH] هفته جاری — سورت: Vol/MktCap ٪ سپس تغییر ۲۴ ساعته</span>
+        <span class="sp"></span>
+        <input type="text" id="qSell" placeholder="🔎 جستجو…" style="width:150px">
+        <button class="btn sell sm" id="xlsxSellBtn">⬇ اکسل Sell</button>
+        <button class="btn ghost sm" id="xlsxBothBtn2">⬇ اکسل Buy+Sell</button>
+      </div>
+      <div class="tbl-wrap"><table id="sellTable"><thead></thead><tbody></tbody></table></div>
+      <div class="note" id="sellNote"></div>
+    </div>
+  </section>
+
+  <!-- ═══ TABLE ═══ -->
+  <section class="tab-panel" id="tab-table">
+    <div class="card">
+      <div class="ctrl-row">
+        <input type="text" id="tblSearch" placeholder="🔎 جستجو…" style="width:170px">
+        <select id="typeFilter">
+          <option value="all">همه انواع</option><option value="crypto">رمز‌ارز</option>
+          <option value="commodity">کالا</option><option value="ratio">نسبت (Ratio)</option>
+        </select>
+        <select id="sigFilter">
+          <option value="all">همه سیگنال‌ها</option><option value="Buy">فقط Buy</option>
+          <option value="Sell">فقط Sell</option><option value="Don't Act">فقط Don't Act</option>
+        </select>
+        <span class="muted" id="tblCount" style="font-size:12px"></span>
+        <span class="sp"></span>
+        <button class="btn ghost sm" id="csvBtn">⬇ دانلود CSV</button>
+      </div>
+      <div class="tbl-wrap">
+        <table id="metricsTable"><thead></thead><tbody id="tblBody"></tbody></table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ RANKING ═══ -->
+  <section class="tab-panel" id="tab-ranking">
+    <div class="rank-grid">
+      <div class="card"><h3>۱۰ نماد برتر — رشد پیش‌بینی‌شده ۱۵ هفته</h3><div id="rankUp"></div></div>
+      <div class="card"><h3>۱۰ نماد — بیشترین ریزش پیش‌بینی‌شده</h3><div id="rankDown"></div></div>
+      <div class="card"><h3>۱۰ نماد — بیشترین Vol/MktCap ٪ (نقدشوندگی)</h3><div id="rankVM"></div></div>
+      <div class="card"><h3>۱۰ نماد — بهترین دقت مدل (کمترین MAPE)</h3><div id="rankMape"></div></div>
+    </div>
+  </section>
+
+  <!-- ═══ ALERTS ═══ -->
+  <section class="tab-panel" id="tab-alerts">
+    <div class="card">
+      <h3>هشدار تغییرات شدید پیش‌بینی‌شده</h3>
+      <div class="ctrl-row">
+        <label class="muted" style="font-size:12.5px">آستانه هشدار: <b id="thVal" class="num">10%</b></label>
+        <input type="range" id="thRange" min="3" max="30" step="1" value="10">
+        <span class="muted" style="font-size:12px">نمادهایی که مدل برای ۱۵ هفته آینده، تغییر بیش از آستانه پیش‌بینی می‌کند</span>
+      </div>
+      <div class="alert-grid" id="alertGrid"></div>
+      <div class="empty" id="alertEmpty" style="display:none">هیچ نمادی با این آستانه یافت نشد ✔</div>
+    </div>
+  </section>
+
+  <!-- ═══ HELP ═══ -->
+  <section class="tab-panel" id="tab-help">
+    <div class="card" style="margin-bottom:13px">
+      <h3>دانلود خروجی‌ها</h3>
+      <div class="ctrl-row">
+        <button class="btn" id="excelBtn">📊 فایل اکسل مدل</button>
+        <button class="btn ghost" id="folderBtn">📁 پوشه خروجی</button>
+        <button class="btn ghost" id="copyExcelBtn">📋 کپی مسیر اکسل</button>
+        <button class="btn buy" id="xlsxBothBtn3">⬇ اکسل سیگنال‌ها (Buy+Sell)</button>
+        <button class="btn ghost" id="csvBtn2">⬇ CSV جدول ارزها</button>
+        <button class="btn ghost" id="jsonBtn">⬇ JSON داده‌ها</button>
+      </div>
+      <div class="muted" id="excelPathNote" style="font-size:12px"></div>
+    </div>
+    <div class="help-grid">
+      <div class="card">
+        <h3>🚀 راه‌اندازی (۵ دقیقه)</h3>
+        <ol>
+          <li>فایل <code class="k">dashboard.html</code> را در پوشه <code class="k">C:\rwork\dashboard\</code> کپی کنید.</li>
+          <li>پکیج <code class="k">jsonlite</code> را در R نصب کنید: <code class="k">install.packages("jsonlite")</code></li>
+          <li>خط <code class="k">source("C:/rwork/export_dashboard.R")</code> را به انتهای اسکریپت اصلی خود اضافه کنید.</li>
+          <li>اسکریپت R را اجرا کنید → فایل <code class="k">data.js</code> کنار داشبورد ساخته می‌شود.</li>
+          <li><code class="k">dashboard.html</code> را با دابل‌کلیک در مرورگر باز کنید.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>🔄 بروزرسانی خودکار</h3>
+        <ol>
+          <li><b>هر ورودی R</b> (مثل <code class="k">C:\rwork\b\weekly_20260719_210240\crypto_forecast_weekly_20260719_210240.xlsx</code>) به‌صورت خودکار به <code class="k">data.js</code> تبدیل و کنار داشبورد کپی می‌شود؛ داشبورد هر چرخه آن را بازخوانی می‌کند و آخرین اجرای «همان روز و ساعت» را نشان می‌دهد.</li>
+          <li><b>قیمت‌های زنده + Vol/MktCap:</b> هر ساعت از CoinPaprika/CoinGecko و صرافی‌های مستقیم (OKX/HTX/Bitget/CoinLore و در صورت نیاز Coinbase/Kraken/Yahoo) دریافت می‌شود. <b>نماد انتخاب‌شده در نمودار هر بار بلافاصله با قیمت تازهٔ صرافی به‌روز می‌شود.</b></li>
+          <li><b>تفاوت قیمت‌ها:</b> «آخرین بسته واقعی» = آخرین قیمت بستهٔ هفتگی در خروجی مدل R (ثابت تا اجرای بعدی). «قیمت فعلی/زنده» = از منابع بازار با تاخیر لحظه‌ای تا چند ده دقیقه (منبع و قدمتش کنارش نوشته می‌شود). قیمت صرافی شما (مثل Binance) می‌تواند ~۰.۱ تا ۰.۳٪ با میانگین صرافی‌ها اختلاف داشته باشد.</li>
+          <li><b>سیگنال‌های Buy/Sell:</b> با هر بروزرسانی قیمت، آنی بازمحاسبه می‌شوند.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>📐 منطق سیگنال (هفته جاری)</h3>
+        <ol>
+          <li><code class="k">SH = Pred_High × 1.01</code> و <code class="k">SL = Pred_High × 0.99</code></li>
+          <li><code class="k">LH = Pred_Low × 1.01</code> و <code class="k">LL = Pred_Low × 0.99</code></li>
+          <li>اگر <code class="k">SL ≤ قیمت ≤ SH</code> ⇒ <b style="color:var(--sell)">Sell</b></li>
+          <li>اگر <code class="k">LL ≤ قیمت ≤ LH</code> ⇒ <b style="color:var(--buy)">Buy</b></li>
+          <li>در غیر این صورت ⇒ <b style="color:var(--none)">Don't Act</b></li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3>📁 ساختار فایل‌ها</h3>
+        <div class="filetree">C:\rwork\
+├── dashboard\
+│   ├── dashboard.html   ← این فایل
+│   └── data.js          ← آخرین اجرای R (خودکار)
+├── export_dashboard.R   ← انتهای اسکریپت اصلی source شود
+└── b\
+    └── weekly_YYYYMMDD_HHMMSS\
+        ├── crypto_forecast_weekly_*.xlsx
+        └── dashboard_data.js (آرشیو)</div>
+      </div>
+    </div>
+  </section>
+
+  <div class="empty" id="emptyState" style="display:none">
+    <h2 style="color:var(--text)">داده‌ای بارگذاری نشد</h2>
+    <p>فایل <code class="k">data.js</code> پیدا نشد. اسکریپت R را اجرا کنید یا فایل را کنار داشبورد قرار دهید.</p>
+    <pre>1) install.packages("jsonlite")
+2) source("C:/rwork/export_dashboard.R")   ← انتهای اسکریپت اصلی
+3) Refresh this page</pre>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script src="./data.js"></script>
+<script src="data.js"></script>
+<script>
+(function(){
+"use strict";
+/* ═══════════════ helpers ═══════════════ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function fmtNum(x){if(x===null||x===undefined||isNaN(x))return"—";if(Math.abs(x)<1e-12)return"0";const a=Math.abs(x);let d;
+  if(a>=10000)d=1;else if(a>=1000)d=2;else if(a>=100)d=2;else if(a>=10)d=3;
+  else if(a>=1)d=4;else if(a>=0.1)d=5;else if(a>=0.01)d=6;else d=8;
+  return Number(x).toLocaleString("en-US",{minimumFractionDigits:0,maximumFractionDigits:d});}
+function fmtC(x){if(x===null||x===undefined||isNaN(x))return"—";const a=Math.abs(x);
+  if(a>=1e12)return"$"+(x/1e12).toFixed(2)+"T";if(a>=1e9)return"$"+(x/1e9).toFixed(2)+"B";if(a>=1e6)return"$"+(x/1e6).toFixed(2)+"M";if(a>=1e4)return"$"+(x/1e3).toFixed(1)+"K";return fmtNum(x);}
+function fmtPct(x,sign=true){if(x===null||x===undefined||isNaN(x))return"—";return(x>0&&sign?"+":"")+x.toFixed(2)+"%";}
+const cls=x=>x>0?"pos":x<0?"neg":"neu";
+const parseD=s=>new Date(s.length===10?s+"T00:00:00Z":s).getTime();
+const TODAY_D=new Date(); const TODAY=Date.UTC(TODAY_D.getFullYear(),TODAY_D.getMonth(),TODAY_D.getDate());
+const DAY=86400000, HOUR=3600000;
+const fmtAxis=(t,short)=>{const iso=new Date(t).toISOString();return short?iso.slice(5,10):iso.slice(0,7);};
+const fmtDT=t=>new Date(t).toISOString().slice(0,16).replace("T"," ")+" UTC";
+const fmtLocal=t=>{const p=n=>String(n).padStart(2,"0");const d=new Date(t);return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;};
+const TYPE_L={crypto:"رمز‌ارز",commodity:"کالا",ratio:"نسبت"};
+function toast(msg,type=""){const t=document.createElement("div");t.className="toast "+type;t.innerHTML=msg;$("#toasts").appendChild(t);setTimeout(()=>{t.style.opacity="0";t.style.transition=".4s";setTimeout(()=>t.remove(),400)},4200);}
+function dl(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2500);}
+
+/* ═══════════════ state ═══════════════ */
+const state={list:[],bySym:new Map(),sel:null,range:"all",demo:false,runId:null,excel:"",
+  sort:{key:"pct",dir:-1},q:"",ftype:"all",fsig:"all",th:10,qBuy:"",qSell:"",
+  mkt:{},mktAt:0,
+  live:{map:{},on:true,minutes:60,until:0,running:false,last:0,ok:0,fail:0}};
+try{const p=JSON.parse(localStorage.getItem("cwDashPrefs")||"{}");if(p.minutes)state.live.minutes=p.minutes;if(typeof p.on==="boolean")state.live.on=p.on;if(p.th)state.th=p.th;if(p.sel)state.sel=p.sel;}catch(e){}
+function savePrefs(){try{localStorage.setItem("cwDashPrefs",JSON.stringify({minutes:state.live.minutes,on:state.live.on,th:state.th,sel:state.sel}));}catch(e){}}
+
+/* ═══════════════ derive ═══════════════ */
+const scalar=v=>(v!==null&&v!==undefined&&typeof v==="object")?null:v; // jsonlite NULL → {} repair
+function derive(s){
+  const rows=[...s.rows].sort((a,b)=>a.d<b.d?-1:1);
+  rows.forEach(r=>{r.a=scalar(r.a);r.p=scalar(r.p);r.po=scalar(r.po);r.ph=scalar(r.ph);r.pl=scalar(r.pl);r.$d=parseD(r.d);});
+  s.mape=scalar(s.mape);s.mae=scalar(s.mae);s.last=scalar(s.last);s.ntrain=scalar(s.ntrain);s.ntest=scalar(s.ntest);
+  const fut=rows.filter(r=>r.a==null&&r.p!=null);
+  const o={...s,rows,fut,
+    f1:fut[0]?fut[0].p:null, f4:fut[3]?fut[3].p:(fut.length?fut[fut.length-1].p:null),
+    f15:fut[14]?fut[14].p:(fut.length?fut[fut.length-1].p:null)};
+  return o;
+}
+const baseOf=s=>{const L=state.live.map[s.s];return(L&&L.price)?L.price:baseAnyOf(s);};
+function baseAnyOf(s){const m=mktOf(s);if(m&&m.p)return m.p;return s.last;}
+const pctOf=s=>{const b=baseOf(s);return(b&&s.f15!=null)?(s.f15-b)/b*100:null;};
+const liveOf=s=>{const L=state.live.map[s.s];return L?L.price:null;};
+const mktOf=s=>state.mkt[s.s.replace(/-USD$/i,"").toUpperCase()]||null;
+const volOf=s=>{const m=mktOf(s);return m?m.v:null;};
+const mcOf=s=>{const m=mktOf(s);return m?m.mc:null;};
+const vmOf=s=>{const m=mktOf(s);return(m&&m.mc)?m.v/m.mc*100:null;};
+const chg24Of=s=>{const m=mktOf(s);if(m&&m.c24!=null)return m.c24;const L=state.live.map[s.s];return(L&&L.prev)?(L.price-L.prev)/L.prev*100:null;};
+
+/* ─── SH/SL/LH/LL bands for CURRENT week + Buy/Sell/Don't Act ─── */
+function curWeekRow(s){
+  const f=s.fut;if(!f||!f.length)return null;
+  const ws=TODAY-((new Date(TODAY).getUTCDay()+6)%7)*DAY; // Monday of current week (UTC)
+  let row=f.find(r=>r.$d>=ws-DAY);
+  if(!row)row=f[f.length-1];
+  return row;
+}
+function curBands(s){
+  const r=curWeekRow(s);if(!r||r.ph==null||r.pl==null)return null;
+  const SH=r.ph*1.01,SL=r.ph*0.99,LH=r.pl*1.01,LL=r.pl*0.99;
+  return{SH,SL,LH,LL,ph:r.ph,pl:r.pl,row:r};
+}
+const zoneInv=s=>{const B=curBands(s);return !!(B&&B.SL<B.LH);}; // v2.6: پهنای پیش‌بینی High/Low زیر ~۲٪ ⇒ SL<LH (ناحیه معکوس)
+function priceOf(s){const l=liveOf(s);if(l!=null)return l;const m=mktOf(s);if(m&&m.p)return m.p;return s.last;}
+function tradeSignal(s){
+  const b=curBands(s);if(!b)return null;const p=priceOf(s);if(p==null)return null;
+  if(p>=b.SL&&p<=b.SH)return"Sell";
+  if(p>=b.LL&&p<=b.LH)return"Buy";
+  return"Don't Act";
+}
+function signalOf(p){if(p==null)return{l:"—",c:"sig-n",grp:"flat"};if(p>=5)return{l:"صعودی قوی",c:"sig-sg",grp:"up"};if(p>=1)return{l:"صعودی",c:"sig-g",grp:"up"};if(p<=-5)return{l:"ریزشی قوی",c:"sig-sr",grp:"down"};if(p<=-1)return{l:"نزولی",c:"sig-r",grp:"down"};return{l:"خنثی",c:"sig-n",grp:"flat"};}
+const TS_META={"Buy":{c:"sig-buy"},"Sell":{c:"sig-sell"},"Don't Act":{c:"sig-none"}};
+
+/* ═══════════════ init ═══════════════ */
+function initData(payload){
+  if(!payload||!payload.symbols||!payload.symbols.length){$("#emptyState").style.display="block";return;}
+  $("#emptyState").style.display="none";
+  state.runId=payload.meta&&payload.meta.run_id; state.demo=!!(payload.meta&&payload.meta.demo);
+  state.excel=(payload.meta&&payload.meta.excel)||"";
+  state.list=payload.symbols.map(derive).filter(s=>s.rows.length);
+  state.bySym=new Map(state.list.map(s=>[s.s,s]));
+  if(!state.sel||!state.bySym.has(state.sel))state.sel=(state.list[0]||{}).s||null;
+  $("#demoBanner").style.display=state.demo?"flex":"none";
+  // 🩺 data-health: warn if forecasts are absent for ALL symbols
+  const withFut=state.list.filter(s=>s.fut.length>0).length;
+  $("#dataWarn").style.display=(withFut===0&&!state.demo)?"flex":"none";
+  const cg=state.list.filter(s=>s.t==="crypto").length,cm=state.list.filter(s=>s.t==="commodity").length,rt=state.list.filter(s=>s.t==="ratio").length;
+  $("#metaChips").innerHTML=
+    `<span class="chip">آخرین اجرای مدل: <b class="num">${esc(payload.meta.generated||"—")}</b></span>`+
+    `<span class="chip" title="نسخهٔ داشبورد — اگر عدد قدیمی‌تری می‌بینید فایل جدید جایگذاری نشده یا کش مرورگر است: Ctrl+F5">v2.6.10</span>`+
+    `<span class="chip">نمادها: <b>${state.list.length}</b></span>`+
+    `<span class="chip">₿ ${cg}</span><span class="chip">🪙 ${cm}</span><span class="chip">÷ ${rt}</span>`+
+    (state.demo?`<span class="chip demo">DEMO</span>`:"");
+  const dir=(state.excel||"").replace(/[\\/][^\\/]+$/,"");
+  $("#excelPathNote").innerHTML=state.excel?
+    `آخرین خروجی مدل: <code class="k">${esc(state.excel)}</code>${dir?` — پوشه: <code class="k">${esc(dir)}</code>`:""}<br><span style="font-size:11px">داشبورد به‌صورت خودکار data.js متناظر با این اجرا را می‌خواند. اگر مرورگر لینک فایل را محدود کرد، از «کپی مسیر اکسل» استفاده کنید.</span>`:
+    `برای دریافت فایل اکسل، اسکریپت R را اجرا کنید.`;
+  buildSymControls();
+  renderAll();
+}
+function renderAll(){renderKPIs();renderTicker();renderTable();renderSignals();renderRanking();renderAlerts();renderChart();}
+
+/* ═══════════════ KPIs ═══════════════ */
+function renderKPIs(){
+  const L=state.list;
+  $("#kpiCount").textContent=L.length;
+  $("#kpiCountS").textContent=`${L.filter(s=>s.t==="crypto").length} رمز‌ارز • ${L.filter(s=>s.t==="commodity").length} کالا • ${L.filter(s=>s.t==="ratio").length} نسبت`;
+  const ms=L.map(s=>s.mape).filter(m=>m!=null&&m<=100);
+  if(ms.length){const avg=ms.reduce((a,b)=>a+b,0)/ms.length;$("#kpiMape").textContent=avg.toFixed(2)+"%";
+    $("#kpiMapeS").textContent=`بهترین دقت: ${Math.min(...ms).toFixed(2)}%`;}
+  const OK_OUT=p=>p!=null&&Math.abs(p)<=300; // حذف مقادیر پرت (تیکرهای مرده/خراب)
+  const withPct=L.map(s=>({s,p:pctOf(s)})).filter(x=>OK_OUT(x.p));
+  if(withPct.length){
+    const best=withPct.reduce((a,b)=>a.p>b.p?a:b),worst=withPct.reduce((a,b)=>a.p<b.p?a:b);
+    $("#kpiBest").innerHTML=`<span class="${cls(best.p)} num">${fmtPct(best.p)}</span>`;
+    $("#kpiBestS").textContent=best.s.s+" • بدون مقادیر پرت";
+    $("#kpiWorst").innerHTML=`<span class="${cls(worst.p)} num">${fmtPct(worst.p)}</span>`;
+    $("#kpiWorstS").textContent=worst.s.s+" • بدون مقادیر پرت";
+    const al=withPct.filter(x=>Math.abs(x.p)>=state.th);
+    $("#alertBadge").textContent=al.length?al.length:"";
+  }
+  const nBuy=state.list.filter(s=>tradeSignal(s)==="Buy").length;
+  const nSell=state.list.filter(s=>tradeSignal(s)==="Sell").length;
+  const nInv=state.list.filter(s=>zoneInv(s)).length; // v2.6
+  if($("#kpiSellS"))$("#kpiSellS").innerHTML="قیمت در ناحیه SL–SH"+(nInv?` • <span style="color:var(--amber);cursor:help" title="تعداد نمادهایی که پهنای پیش‌بینی High/Low این هفتهٔ آن‌ها زیر ~۲٪ است. طبق فرمول شما: SL=PredHigh×0.99 و LH=PredLow×1.01 — وقتی PredHigh/PredLow < 1.0202 باشد، SL از LH کوچک‌تر می‌شود و دو ناحیه وارونه/هم‌پوشان می‌شوند (در هم‌پوشانی Sell در اولویت است)">⚠️ ${nInv} ناحیه معکوس</span>`:"");
+  $("#kpiBuy").textContent=nBuy;$("#kpiSell").textContent=nSell;
+  $("#buyCnt").textContent=nBuy||"";$("#sellCnt").textContent=nSell||"";
+}
+
+/* ═══════════════ ticker (capped + constant speed) ═══════════════ */
+function renderTicker(){
+  // movers first (largest |24h| change), fallback to list order; cap at 60 for smooth animation
+  const arr=[...state.list];
+  const anyChg=arr.some(s=>chg24Of(s)!=null);
+  if(anyChg)arr.sort((a,b)=>Math.abs(chg24Of(b)??0)-Math.abs(chg24Of(a)??0));
+  const items=arr.slice(0,60).map(s=>{
+    const lp=priceOf(s),chg=chg24Of(s);
+    if(lp!=null)return`<span class="tk"><span class="s">${esc(s.s)}</span><span class="num">${fmtNum(lp)}</span><span class="num ${cls(chg)}">${chg!=null?fmtPct(chg):""}</span></span>`;
+    return`<span class="tk"><span class="s">${esc(s.s)}</span><span class="num">${fmtNum(s.last)}</span></span>`;
+  }).join("");
+  const track=$("#tickerTrack");
+  track.innerHTML=items+items;
+  requestAnimationFrame(()=>{
+    const w=(track.scrollWidth||4800)/2;
+    const dur=Math.min(Math.max(w/120,12),600); // v2.4: سرعت آرام ~۱۲۰ px/s (حدود یک‌سوم سرعت قبلی)
+    track.style.animationDuration=dur+"s";
+  });
+}
+
+/* ═══════════════ symbol controls ═══════════════ */
+function buildSymControls(){
+  const sel=$("#symSel");
+  const groups={crypto:[],commodity:[],ratio:[]};
+  state.list.forEach(s=>groups[s.t].push(s));
+  sel.innerHTML=["crypto","commodity","ratio"].map(g=>groups[g].length?`<optgroup label="${TYPE_L[g]}">`+groups[g].map(s=>`<option value="${esc(s.s)}">${esc(s.s)}</option>`).join("")+`</optgroup>`:"").join("");
+  if(state.sel)sel.value=state.sel;
+  const favs=["BTC-USD","ETH-USD","SOL-USD","GC=F","SI=F","CL=F","XAUT-USD"];
+  $("#quickChips").innerHTML=favs.filter(f=>state.bySym.has(f)).slice(0,6)
+    .map(f=>`<button class="btn ghost sm qchip" data-sym="${esc(f)}">${esc(f)}</button>`).join(" ");
+}
+function applySymFilter(){
+  const q=$("#symSearch").value.trim().toUpperCase();
+  [...$("#symSel").options].forEach(o=>{o.hidden=q&&!o.value.toUpperCase().includes(q);});
+}
+$("#symSearch").addEventListener("input",()=>{
+  applySymFilter();
+  const q=$("#symSearch").value.trim().toUpperCase();
+  const exact=state.list.find(s=>s.s.toUpperCase()===q);
+  if(exact)selectSymbol(exact.s);
+});
+$("#symSel").addEventListener("change",e=>selectSymbol(e.target.value));
+function selectSymbol(sym){if(!state.bySym.has(sym))return;state.sel=sym;$("#symSel").value=sym;savePrefs();renderChart();refreshSymbolPrice(sym);}
+// v2.6.1: قیمت نماد انتخاب‌شده بلافاصله و تازه از صرافی گرفته می‌شود (نه فقط ساعتی)
+const VIA_L={paprika:"CoinPaprika",gecko:"CoinGecko",okx:"OKX",htx:"HTX",bitget:"Bitget",coinbase:"Coinbase",kraken:"Kraken",yahoo:"Yahoo",jina:"Yahoo (jina)","r-yahoo":"Yahoo (R) ⭐",ex:"صرافی",calc:"محاسبه"};
+const srcOf=s=>{const L=state.live.map[s.s];return L&&L.via?(VIA_L[L.via]||L.via):null;};
+const ageOf=s=>{const L=state.live.map[s.s];if(!L||!L.time)return"";const m=Math.max(0,Math.round((Date.now()-(L.mktTime||L.time))/60000)); // v2.6.7: mktTime = زمان واقعی آخرین معامله (برای فیوچرز آخر هفته مهم است)
+  return m<1?"هم‌اکنون":m<60?m+" دقیقه پیش":Math.floor(m/60)+" ساعت پیش";};
+// v2.6.9: منبع طلایی — فایل live_prices.js که live_prices.R «مستقیماً» از یاهو می‌نویسد (بدون هیچ پراکسی و سهمیه = دقیقاً عدد سایت یاهو)
+const RYF_TTL=2*3600e3;let rYfStatus="missing";let rYfLoadedTs=0;
+function loadLiveYf(){return new Promise(res=>{ // نتیجه: پرکردن live.map با via=r-yahoo (تازه‌ترین فایل)
+  try{const sc=document.createElement("script");
+    sc.src="live_prices.js?v="+Date.now();
+    sc.onload=()=>{try{
+      const d=window.LIVE_YF;
+      if(!d||!d.ts||!d.prices){rYfStatus="missing";res();return;}
+      if(Date.now()-d.ts*1000>RYF_TTL){rYfStatus="stale";res();return;}
+      if(d.ts*1000<=rYfLoadedTs){rYfStatus="ok";res();return;}
+      rYfLoadedTs=d.ts*1000;let n=0;const nw=Date.now();
+      for(const sym in d.prices){const q=d.prices[sym];if(!q||!(q.p>0))continue;
+        state.live.map[sym]={price:q.p,prev:(q.prev>0?q.prev:null),time:nw,mktTime:(q.t?q.t*1000:null),via:"r-yahoo",srcAt:nw};n++;}
+      rYfStatus="ok";state.rYfCount=n;
+    }catch(e){console.warn("LIVE_YF",e);}res();};
+    sc.onerror=()=>{rYfStatus="missing";res();};
+    document.head.appendChild(sc);
+  }catch(e){res();}
+});}
+let selPriceBusy=null;
+async function refreshSymbolPrice(sym){
+  const s=state.bySym.get(sym);if(!s||s.t==="ratio")return;
+  const cur0=state.live.map[sym];
+  if(cur0&&cur0.via==="r-yahoo"&&Date.now()-(cur0.srcAt||0)<15*60000)return; // قیمت R تازه است — همان یاهوست، لازم نیست تعویض شود
+  if(selPriceBusy===sym)return;selPriceBusy=sym;
+  const paint=()=>{if(state.sel===sym){renderStatChips(s);renderBandChips(s);renderSignals();renderTable();renderKPIs();}}; // v2.6.8: حتی وسط چرخهٔ کند هم بلافاصله نمایش بده — «زنده ندارد» گیر نکند
+  try{
+    const mb=/^([A-Za-z0-9]+)-USD$/i.exec(s.s);
+    // v2.6.7/2.6.8: یاهو «اولِ مطلق» — هرگز اول عدد صرافی نمایش داده نشود؛ صرافی فقط وقتی یاهو در دسترس نیست (با برچسب منبع)
+    let r=await fetchSparkOne(s.s).catch(()=>null);               // یاهو ارزان: فقط ۱ درخواست
+    if(!r&&JINA_OK())r=await fetchQuote(s.s,true).catch(()=>null); // یاهو v8 سریع (بدون پروکسی کند)
+    if(!r&&mb)r=await fetchQuoteEx(mb[1].toUpperCase()).catch(()=>null);
+    if(!r)r=await fetchCommodityQuote(s.s).catch(()=>null);
+    if(r){state.live.map[s.s]={price:r.price,prev:r.prev??null,time:Date.now(),mktTime:r.mktTime||r.time||null,via:r.via||"yahoo"};paint();}
+  }finally{selPriceBusy=null;}
+}
+document.addEventListener("click",e=>{
+  const el=e.target.closest("[data-sym]");
+  if(el&&state.bySym.has(el.dataset.sym)){selectSymbol(el.dataset.sym);switchTab("chart");window.scrollTo({top:0,behavior:"smooth"});}
+});
+
+/* ═══════════════ tabs ═══════════════ */
+function switchTab(name){
+  $$(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));
+  $$(".tab-panel").forEach(p=>p.classList.toggle("active",p.id==="tab-"+name));
+}
+$$(".tab-btn").forEach(b=>b.addEventListener("click",()=>switchTab(b.dataset.tab)));
+
+/* ═══════════════ chart helpers ═══════════════ */
+$("#rangeAll").addEventListener("click",()=>{state.range="all";$("#rangeAll").classList.add("on");$("#range15").classList.remove("on");renderChart();});
+$("#range15").addEventListener("click",()=>{state.range="15";$("#range15").classList.add("on");$("#rangeAll").classList.remove("on");renderChart();});
+let rzT;window.addEventListener("resize",()=>{clearTimeout(rzT);rzT=setTimeout(renderChart,240);});
+function niceTicks(lo,hi,n=5){
+  const span=hi-lo||1,raw=span/n,mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  const norm=raw/mag;let st;if(norm<1.5)st=1;else if(norm<3)st=2;else if(norm<7)st=5;else st=10;st*=mag;
+  const start=Math.ceil(lo/st)*st,out=[];for(let v=start;v<=hi+1e-12;v+=st)out.push(+v.toFixed(12));return out;
+}
+function pathOf(pts,X,Y){return pts.map((p,i)=>(i?"L":"M")+X(p.t).toFixed(1)+","+Y(p.v).toFixed(1)).join(" ");}
+function bandSvg(b,X0,XW,Y,lo,hi){
+  // SH/SL/LH/LL lines + zones; drawn between [X0, X0+XW]; labels on RIGHT side (no axis overlap)
+  let g="";
+  const zone=(v1,v2,color)=>{const y1=Math.max(Y(Math.max(v1,v2)),Y(hi)),y2=Math.min(Y(Math.min(v1,v2)),Y(lo));
+    if(y2>y1)g+=`<rect x="${X0}" y="${y1}" width="${XW}" height="${y2-y1}" fill="${color}"/>`;};
+  zone(b.SL,b.SH,"#ff174418"); zone(b.LL,b.LH,"#00e67614");
+  const lbl=(v,col,txt,dy)=>{if(v<lo||v>hi)return;const y=Y(v);
+    g+=`<rect x="${X0+XW-72}" y="${y+dy-10}" width="70" height="13" rx="4" fill="#0d1420" stroke="${col}" stroke-width=".6" opacity=".92"/>`;
+    g+=`<text x="${X0+XW-6}" y="${y+dy}" fill="${col}" font-size="10" font-weight="700" text-anchor="end" direction="ltr">${txt} ${fmtC(v)}</text>`;};
+  const line=(v,col,lblT,dy)=>{if(v<lo||v>hi)return;const y=Y(v);
+    g+=`<line x1="${X0}" y1="${y}" x2="${X0+XW}" y2="${y}" stroke="${col}" stroke-width="1.3" stroke-dasharray="2 3"/>`;
+    lbl(v,col,lblT,dy);};
+  line(b.SH,"#ff1744","SH",-5);line(b.SL,"#ff6e8a","SL",13);line(b.LH,"#00e676","LH",-5);line(b.LL,"#00d084","LL",13);
+  return g;
+}
+
+/* ═══════════════ main chart ═══════════════ */
+function renderChart(){
+  const s=state.bySym.get(state.sel);const wrap=$("#chartWrap");
+  if(!s){wrap.innerHTML="<div class='empty'>نمادی انتخاب نشده</div>";return;}
+  renderStatChips(s);renderFutureTable(s);renderBandChips(s);renderIntraday();
+  const W=Math.max(wrap.clientWidth-14,620),H=400,m={t:18,r:18,b:32,l:66},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  let rows=s.rows;
+  if(state.range==="15"){const t0=TODAY-112*DAY,t1=TODAY+112*DAY;rows=rows.filter(r=>r.$d>=t0&&r.$d<=t1);}
+  else{const t5y=TODAY-Math.round(5*365.25*DAY);if(rows.length&&rows[0].$d<t5y)rows=rows.filter(r=>r.$d>=t5y);} // v2.6: پنج سال اخیر
+  if(!rows.length){wrap.innerHTML="<div class='empty'>در این بازه داده‌ای نیست</div>";return;}
+  const x0=rows[0].$d,x1=rows[rows.length-1].$d;
+  // v2.4: مقیاس X دوپاره — ناحیه پس از امروز (پیش‌بینی) ~۳۴٪ عرض نمودار
+  const hasF=state.range!=="15"&&TODAY>x0&&TODAY<x1;
+  const histW=hasF?Math.round(iw*0.66):iw, futW=iw-histW, hx1=hasF?TODAY:x1;
+  const X=t=>t<=hx1? m.l+((t-x0)/Math.max(1,hx1-x0))*histW
+                   : m.l+histW+((t-hx1)/Math.max(1,x1-hx1))*futW;
+  let lo=Infinity,hi=-Infinity;
+  rows.forEach(r=>{[r.a,r.p].forEach(v=>{if(v!=null){lo=Math.min(lo,v);hi=Math.max(hi,v);}});});
+  const B=curBands(s);
+  if(B){lo=Math.min(lo,B.LL);hi=Math.max(hi,B.SH);}
+  if(s.last!=null){lo=Math.min(lo,s.last);hi=Math.max(hi,s.last);}
+  {const LP0=priceOf(s);if(LP0!=null){lo=Math.min(lo,LP0);hi=Math.max(hi,LP0);}} // v2.6.10: قیمت زنده داخل بازه باشد تا خط «قیمت الان» همیشه دیده شود
+  if(!isFinite(lo)){wrap.innerHTML="<div class='empty'>داده نامعتبر</div>";return;}
+  const pad=(hi-lo)*0.07||Math.abs(hi)*0.04||1;lo=Math.max(lo-pad,0);hi+=pad;
+  const Y=v=>m.t+(1-(v-lo)/(hi-lo))*ih;
+
+  const actual=rows.filter(r=>r.a!=null).map(r=>({t:r.$d,v:r.a}));
+  const btPred=rows.filter(r=>r.a!=null&&r.p!=null).map(r=>({t:r.$d,v:r.p}));
+  let fut=rows.filter(r=>r.a==null&&r.p!=null).map(r=>({t:r.$d,v:r.p}));
+  if(fut.length&&s.last!=null&&s.last_date){const lt=parseD(s.last_date);if(lt<fut[0].t)fut=[{t:lt,v:s.last},...fut];}
+
+  const yt=niceTicks(lo,hi,5);
+  const xt=[];
+  if(hasF){ // تیک‌های جدا برای گذشته و آینده تا در هر دو ناحیه خوانا باشند
+    const hr=rows.filter(r=>r.$d<=TODAY),fr=rows.filter(r=>r.$d>TODAY);
+    const s1=Math.max(1,Math.ceil(hr.length/5));for(let i=0;i<hr.length;i+=s1)xt.push(hr[i].$d);
+    const s2=Math.max(1,Math.ceil(fr.length/5));
+    let lastLbl="";for(let i=0;i<fr.length;i+=s2){const lb=fmtAxis(fr[i].$d,false);if(lb!==lastLbl){xt.push(fr[i].$d);lastLbl=lb;}}
+  }else{
+    const step=Math.max(1,Math.ceil(rows.length/6));for(let i=0;i<rows.length;i+=step)xt.push(rows[i].$d);
+  }
+  const short=state.range==="15";
+  const area="futA"+Math.random().toString(36).slice(2,7);
+  let g="";
+  g+=`<defs><linearGradient id="${area}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#34d399" stop-opacity=".22"/><stop offset="100%" stop-color="#34d399" stop-opacity="0"/></linearGradient></defs>`;
+  if(hasF&&futW>0)g+=`<rect x="${m.l+histW}" y="${m.t}" width="${futW}" height="${ih}" fill="#34d399" opacity="0.06"/>`+
+    `<text x="${m.l+iw-6}" y="${m.t+13}" fill="#34d399" font-size="10.5" text-anchor="start" opacity=".85">پیش‌بینی ۱۵ هفته آینده ⬅</text>`;
+  yt.forEach(v=>{const y=Y(v);g+=`<line x1="${m.l}" y1="${y}" x2="${m.l+iw}" y2="${y}" stroke="#1c2942" stroke-width="1"/><text x="${m.l-8}" y="${y+4}" fill="#7c8aa0" font-size="11" text-anchor="end" direction="ltr">${fmtC(v)}</text>`;});
+  xt.forEach(t=>{const x=X(t);g+=`<text x="${x}" y="${m.t+ih+21}" fill="#7c8aa0" font-size="11" text-anchor="middle" direction="ltr">${fmtAxis(t,short)}</text>`;});
+  g+=`<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t+ih}" stroke="#25344f"/><line x1="${m.l}" y1="${m.t+ih}" x2="${m.l+iw}" y2="${m.t+ih}" stroke="#25344f"/>`;
+  // SH/SL/LH/LL bands (from today onward, highlighted)
+  const bandX0=TODAY>=x0&&TODAY<=x1?X(TODAY):m.l;
+  if(B)g+=bandSvg(B,bandX0,m.l+iw-bandX0,Y,lo,hi);
+  if(TODAY>=x0&&TODAY<=x1){const x=X(TODAY);g+=`<line x1="${x}" y1="${m.t}" x2="${x}" y2="${m.t+ih}" stroke="#f87171" stroke-dasharray="5 4" stroke-width="1.4"/><text x="${x+5}" y="${m.t+12}" fill="#f87171" font-size="11">امروز</text>`;}
+  if(fut.length>1){g+=`<path d="M${X(fut[0].t)},${Y(lo)} "+pathOf(fut,X,Y).slice(1)+" L${X(fut[fut.length-1].t)},${Y(lo)} Z" fill="url(#${area})"/>`;}
+  if(actual.length>1)g+=`<path d="${pathOf(actual,X,Y)}" fill="none" stroke="#22d3ee" stroke-width="2.2" stroke-linejoin="round"/>`;
+  if(btPred.length>1)g+=`<path d="${pathOf(btPred,X,Y)}" fill="none" stroke="#fbbf24" stroke-width="1.8" stroke-dasharray="6 4" stroke-linejoin="round"/>`;
+  if(fut.length>1)g+=`<path d="${pathOf(fut,X,Y)}" fill="none" stroke="#34d399" stroke-width="2.4" stroke-linejoin="round"/>`;
+  fut.slice(1).forEach(p=>{g+=`<circle cx="${X(p.t)}" cy="${Y(p.v)}" r="3" fill="#34d399" stroke="#0a0e14" stroke-width="1.2"/>`;});
+  const la=actual[actual.length-1];
+  if(la)g+=`<circle cx="${X(la.t)}" cy="${Y(la.v)}" r="4" fill="#22d3ee" stroke="#0a0e14" stroke-width="1.5"/>`;
+  // v2.6.10: خط «قیمت الان» — دقیقاً همان قیمت زندهٔ جدول/کارت (یاهو)، نه آخرین بستهٔ مدل
+  {const LP=priceOf(s);
+   if(LP!=null&&LP>lo&&LP<hi){const y=Y(LP);
+     g+=`<line x1="${m.l}" y1="${y}" x2="${m.l+iw}" y2="${y}" stroke="#e6ecf5" stroke-dasharray="4 4" stroke-width="1.1"/>`;
+     if(TODAY>=x0&&TODAY<=x1)g+=`<circle cx="${X(TODAY)}" cy="${y}" r="4.2" fill="#e6ecf5" stroke="#0a0e14" stroke-width="1.5"><title>قیمت الان (زنده): ${fmtNum(LP)}</title></circle>`;
+     g+=`<text x="${m.l+10}" y="${y-6}" fill="#e6ecf5" font-size="11" text-anchor="end" stroke="#0a0e14" stroke-width="3" paint-order="stroke">قیمت الان: ${fmtNum(LP)}</text>`;}}
+  g+=`<line id="chLine" y1="${m.t}" y2="${m.t+ih}" stroke="#94a3b8" stroke-dasharray="3 3" style="display:none"/>`;
+  g+=`<circle id="chDot" r="4.5" fill="#fff" stroke="#0a0e14" stroke-width="2" style="display:none"/>`;
+  g+=`<rect id="chHit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+
+  wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Tahoma,Segoe UI,Arial">${g}</svg><div id="chartTip"></div>`;
+  const svg=wrap.querySelector("svg"),tip=wrap.querySelector("#chartTip");
+  const chL=svg.querySelector("#chLine"),chD=svg.querySelector("#chDot"),hit=svg.querySelector("#chHit");
+  hit.addEventListener("mousemove",e=>{
+    const rect=svg.getBoundingClientRect(),sc=W/rect.width;
+    const px=(e.clientX-rect.left)*sc;
+    let t; // v2.4: وارون مقیاس X دوپاره (ناحیه آینده بزرگ‌تر)
+    if(hasF&&px>m.l+histW)t=hx1+((px-m.l-histW)/Math.max(1,futW))*(x1-hx1);
+    else t=x0+((px-m.l)/Math.max(1,histW))*(hx1-x0);
+    let best=0,bd=Infinity;rows.forEach((r,i)=>{const d=Math.abs(r.$d-t);if(d<bd){bd=d;best=i;}});
+    const r=rows[best],cx=X(r.$d);
+    chL.setAttribute("x1",cx);chL.setAttribute("x2",cx);chL.style.display="block";
+    const v=r.a!=null?r.a:r.p;
+    if(v!=null){chD.setAttribute("cx",cx);chD.setAttribute("cy",Y(v));chD.style.display="block";}
+    const diff=(r.a!=null&&r.p!=null)?(r.p-r.a)/r.a*100:null;
+    tip.innerHTML=`<div style="color:#94a3b8" class="num">${r.d}</div>`+
+      (r.a!=null?`<div><span style="color:#22d3ee">●</span> واقعی: <b class="num">${fmtNum(r.a)}</b></div>`:"")+
+      (r.p!=null?`<div><span style="color:${r.a!=null?"#fbbf24":"#34d399"}">●</span> پیش‌بینی: <b class="num">${fmtNum(r.p)}</b></div>`:"")+
+      (diff!=null?`<div>اختلاف: <b class="num ${cls(diff)}">${fmtPct(diff)}</b></div>`:"");
+    tip.style.display="block";
+    const tpx=cx/sc,tpy=Y(v!=null?v:lo)/sc;
+    const flip=tpx>rect.width-190;
+    tip.style.left=(flip?tpx-175:tpx+16)+"px";
+    tip.style.top=Math.min(Math.max(tpy-20,4),rect.height-100)+"px";
+  });
+  hit.addEventListener("mouseleave",()=>{chL.style.display="none";chD.style.display="none";tip.style.display="none";});
+}
+
+function renderStatChips(s){
+  const L=state.live.map[s.s],p=pctOf(s),g=signalOf(p),ts=tradeSignal(s);
+  const st=(t,v,c="")=>`<div class="stat"><div class="t">${t}</div><div class="v ${c}" dir="ltr" style=text-align:end>${v}</div></div>`;
+  $("#chartStats").innerHTML=
+    st("آخرین بسته واقعی هفتگی (مدل)",fmtNum(s.last))+
+    st(L?`قیمت فعلی (زنده${srcOf(s)?" • "+srcOf(s):""}${ageOf(s)?" • "+ageOf(s):""})`:"قیمت فعلی (⚠️ زنده ندارد — مقدار مدل)",priceOf(s)!=null?fmtNum(priceOf(s)):"—",L?cls(chg24Of(s)):"neu")+
+    st("پیش‌بینی +۱ هفته",fmtNum(s.f1))+
+    st("پیش‌بینی +۱۵ هفته",fmtNum(s.f15))+
+    st("تغییر پیش‌بینی‌شده",fmtPct(p),cls(p))+
+    st("MAPE",s.mape!=null?s.mape.toFixed(2)+"%":"—")+
+    st("روند ۱۵ هفته",`<span class="sig ${g.c}">${g.l}</span>`)+
+    st("سیگنال هفته جاری",ts?`<span class="sig ${TS_META[ts].c}">${ts}</span>`:"—");
+}
+function renderPriceGauge(s){
+  const el=$("#priceGauge"),B=curBands(s),p=priceOf(s);
+  if(!el)return;
+  if(!B||p==null){el.innerHTML="";return;}
+  const ts=tradeSignal(s);
+  const sigC=ts==="Sell"?"#ff1744":ts==="Buy"?"#00e676":"#ffc400";
+  const sentence=ts==="Sell"?
+      `قیمت <b class="num">${fmtNum(p)}</b> داخل ناحیه <b style="color:var(--sell)">فروش</b> <span class="num muted">[${fmtNum(B.SL)} … ${fmtNum(B.SH)}]</span> است`:
+    ts==="Buy"?
+      `قیمت <b class="num">${fmtNum(p)}</b> داخل ناحیه <b style="color:var(--buy)">خرید</b> <span class="num muted">[${fmtNum(B.LL)} … ${fmtNum(B.LH)}]</span> است`:
+      `قیمت <b class="num">${fmtNum(p)}</b> بیرون از هر دو ناحیه است`;
+  const W=1000,H=80,m={l:46,r:46,t:16,b:14},iw=W-m.l-m.r,y0=42; // y0 = خط مبنا
+  const vals=[B.LL,B.LH,B.SL,B.SH,p];let lo=Math.min(...vals),hi=Math.max(...vals);
+  const pad=(hi-lo)*0.10||Math.abs(hi)*0.01||1;lo-=pad;hi+=pad;
+  const X=v=>m.l+(v-lo)/(hi-lo)*iw;
+  let g="";
+  // baseline
+  g+=`<line x1="${m.l}" y1="${y0}" x2="${m.l+iw}" y2="${y0}" stroke="#25344f" stroke-width="1.2"/>`;
+  // zones (overlap renders darker automatically)
+  const zone=(a,b,fill,lb,col)=>{const x1=X(Math.min(a,b)),x2=X(Math.max(a,b));
+    g+=`<rect x="${x1}" y="14" width="${x2-x1}" height="26" rx="3" fill="${fill}"/>`;
+    if(x2-x1>52)g+=`<text x="${(x1+x2)/2}" y="37" fill="${col}" font-size="10.5" font-weight="700" text-anchor="middle" opacity=".95">${lb}</text>`;};
+  zone(B.LL,B.LH,"#00e6761c","خرید","#00e676");
+  zone(B.SL,B.SH,"#ff17441c","فروش","#ff6e8a");
+  // boundary ticks — مرتب عددی؛ لیبل‌ها در صورت تراکم دو ردیفه
+  const ticks=[["LL",B.LL,"#00d084"],["LH",B.LH,"#00e676"],["SL",B.SL,"#ff6e8a"],["SH",B.SH,"#ff1744"]]
+    .sort((a,b)=>a[1]-b[1]);
+  let prevX=-999,prevRow=-1;
+  ticks.forEach(([nm,v,col])=>{
+    const x=X(v);
+    const row=(x-prevX<54)?((prevRow+1)%2):0;
+    prevX=x;prevRow=row;
+    g+=`<line x1="${x}" y1="12" x2="${x}" y2="${y0+4}" stroke="${col}" stroke-width="1.3" stroke-dasharray="3 2"/>`+
+       `<text x="${x}" y="${58+row*13}" fill="${col}" font-size="10.5" font-weight="700" text-anchor="middle" direction="ltr">${nm}</text>`+
+       `<text x="${x}" y="9" fill="#7c8aa0" font-size="9.5" text-anchor="middle" direction="ltr">${fmtC(v)}</text>`;});
+  // price marker
+  const xp=X(p);
+  g+=`<line x1="${xp}" y1="10" x2="${xp}" y2="${y0+2}" stroke="${sigC}" stroke-width="2"/>`+
+     `<circle cx="${xp}" cy="${y0}" r="5" fill="${sigC}" stroke="#0a0e14" stroke-width="1.6"/>`+
+     `<rect x="${Math.min(Math.max(xp-46,2),W-124)}" y="12" width="118" height="17" rx="5" fill="#0d1420" stroke="${sigC}" stroke-width=".8"/>`+
+     `<text x="${Math.min(Math.max(xp+13,60),W-62)}" y="25" fill="${sigC}" font-size="11" font-weight="700" text-anchor="middle" direction="ltr">▶ ${fmtC(p)}</text>`;
+  el.innerHTML=`<div style="font-size:12px; margin:2px 2px 4px; color:var(--muted)">${sentence} ${ts?`<span class="sig ${TS_META[ts].c}" style="margin-inline-start:6px">${ts}</span>`:""}${zoneInv(s)?'<span class="muted" style="font-size:10.5px"> — ⚠️ نواحی هم‌پوشان/وارونه (Sell در اولویت)</span>':""}</div>`+
+    `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:auto; display:block" font-family="Tahoma,Segoe UI,Arial">${g}</svg>`;
+}
+function renderBandChips(s){
+  const B=curBands(s),r=curWeekRow(s);
+  if(!B){$("#bandChips").innerHTML=`<span class="muted">بازه هفته جاری موجود نیست</span>`;renderPriceGauge(s);return;}
+  const ts=tradeSignal(s);
+  $("#bandChips").innerHTML=
+    `<span class="bandchip">هفته جاری: <b class="num">${r?r.d:"—"}</b></span>`+
+    `<span class="bandchip bc-sell">SH <b class="num">${fmtNum(B.SH)}</b></span>`+
+    `<span class="bandchip bc-sell">SL <b class="num">${fmtNum(B.SL)}</b></span>`+
+    `<span class="bandchip bc-buy">LH <b class="num">${fmtNum(B.LH)}</b></span>`+
+    `<span class="bandchip bc-buy">LL <b class="num">${fmtNum(B.LL)}</b></span>`+
+    `<span class="bandchip">Pred High <b class="num">${fmtNum(B.ph)}</b></span>`+
+    `<span class="bandchip">Pred Low <b class="num">${fmtNum(B.pl)}</b></span>`+
+    `<span class="bandchip">قیمت الان: <b class="num">${fmtNum(priceOf(s))}</b>${srcOf(s)?` <span class="muted" style="font-size:9.5px">${srcOf(s)} • ${ageOf(s)}</span>`:' <span style="color:#fbbf24; font-size:9.5px">⚠️ مقدار مدل — زنده در دسترس نیست</span>'}</span>`+
+    (ts?`<span class="sig ${TS_META[ts].c}" style="font-size:12px; padding:4px 14px">${ts}</span>`:"")+
+    (B.SL<B.LH?`<span class="bandchip" style="border-color:#92600e;color:#fbbf24;cursor:help" title="پهنای پیش‌بینی High/Low = ${((B.ph/B.pl-1)*100).toFixed(2)}٪ — زیر ~۲٪ است؛ طبق فرمول، SL از LH کوچک‌تر شده و نواحی وارونه‌اند. در هم‌پوشانی، طبق ترتیب فرمول شما Sell اولویت دارد">⚠️ ناحیه معکوس (پهنا ${((B.ph/B.pl-1)*100).toFixed(1)}٪)</span>`:"");
+  renderPriceGauge(s);
+}
+function renderFutureTable(s){
+  let prev=baseOf(s);
+  const rows=(s.fut||[]).map((r,i)=>{
+    const w=prev&&r.p!=null?(r.p-prev)/prev*100:null;prev=r.p!=null?r.p:prev;
+    const cur=i===0?' style="background:#0e749033"':'';
+    return`<tr${cur}><td class="num">${i+1}</td><td class="num">${r.d}${i===0?' <span class="sig sig-n">هفته جاری</span>':""}</td><td class="num">${fmtNum(r.po)}</td><td class="num pos">${fmtNum(r.ph)}</td><td class="num neg">${fmtNum(r.pl)}</td><td class="num" style="font-weight:700">${fmtNum(r.p)}</td><td class="num ${cls(w)}">${fmtPct(w)}</td></tr>`;
+  }).join("");
+  $("#futureTable").innerHTML=`<thead><tr><th>#</th><th>تاریخ</th><th>باز</th><th title="مبنای SH/SL">بیشینه</th><th title="مبنای LH/LL">کمینه</th><th>پایانی</th><th>تغییر هفتگی</th></tr></thead><tbody>${rows||"<tr><td colspan=7 class=muted>داده‌ای نیست</td></tr>"}</tbody>`;
+}
+
+/* ═══════════════ intraday hourly chart + session signals ═══════════════ */
+const hourCache={}; // sym -> {ts, pts:[{t,c}]}
+function sessionOf(h){return{0:"آسیا",4:"وسط آسیا",8:"اروپا",12:"وسط اروپا",16:"آمریکا",20:"وسط آمریکا"}[h]||"";}
+async function fetchHourlyOne(sym){
+  const mb=/^([A-Za-z0-9]+)-USD$/i.exec(sym), base=mb?mb[1].toUpperCase():null;
+  // v2.5: ابتدا صرافی‌های مستقیم با CORS آزاد (OKX/HTX/Bitget/Coinbase/Crypto.com) — سریع و بدون پراکسی
+  if(base){
+    const clean=pts=>{const v=(pts||[]).filter(p=>p&&isFinite(p.t)&&isFinite(p.c)&&p.c>0);
+      v.sort((a,b)=>a.t-b.t);return v.length>20?v:null;};
+    const srcs=[
+      ()=>[`https://www.okx.com/api/v5/market/candles?instId=${base}-USDT&bar=1H&limit=72`,
+        j=>j&&Array.isArray(j.data)?j.data.map(r=>({t:+r[0],c:+r[4]})):null],
+      ()=>[`https://api.huobi.pro/market/history/kline?period=60min&size=72&symbol=${base.toLowerCase()}usdt`,
+        j=>j&&Array.isArray(j.data)?j.data.map(r=>({t:r.id*1000,c:+r.close})):null],
+      ()=>[`https://api.bitget.com/api/v2/spot/market/candles?symbol=${base}USDT&granularity=1h&limit=72`,
+        j=>j&&Array.isArray(j.data)?j.data.map(r=>({t:+r[0],c:+r[4]})):null],
+      ()=>[`https://api.exchange.coinbase.com/products/${base}-USD/candles?granularity=3600`,
+        j=>Array.isArray(j)?j.slice(0,72).map(r=>({t:r[0]*1000,c:+r[4]})):null],
+      ()=>[`https://api.crypto.com/exchange/v1/public/get-candlestick?instrument_name=${base}_USD&timeframe=1h&count=72`,
+        j=>j&&j.result&&Array.isArray(j.result.data)?j.result.data.map(r=>({t:+r.t,c:+r.c})):null],
+    ];
+    for(const mkf of srcs){
+      try{const u=mkf(),r=await fetchT(u[0],8000);if(!r.ok)continue;
+        const v=clean(u[1](await r.json()));if(v)return v;
+      }catch(e){}
+    }
+  }
+  // fallback: یاهو (مستقیم + پراکسی) — برای کالاها (GC=F/SI=F) و نمادهای غیرصرافی
+  const mk=h=>`https://${h}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?range=3d&interval=1h`;
+  const u1=mk("query1"),u2=mk("query2");
+  const urls=[u1,u2,
+    "https://r.jina.ai/"+u1,"https://r.jina.ai/"+u2,
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(u1),
+    "https://corsproxy.io/?url="+encodeURIComponent(u1),
+    "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u1)];
+  for(const u of urls){
+    try{const r=await fetchT(u,u.startsWith("https://r.jina.ai/")?15000:11000);if(!r.ok)continue;
+      const j=await asJson(r);const res=j&&j.chart&&j.chart.result&&j.chart.result[0];
+      const ts=res&&res.timestamp,q=res&&res.indicators&&res.indicators.quote&&res.indicators.quote[0];
+      if(ts&&q&&q.close){const pts=ts.map((t,i)=>({t:t*1000,c:q.close[i]})).filter(p=>p.c!=null);
+        if(pts.length>20)return pts;}
+    }catch(e){}
+  }
+  return null;
+}
+async function loadHourly(s){
+  const fresh=hourCache[s.s]&&Date.now()-hourCache[s.s].ts<state.live.minutes*60000;
+  if(fresh)return hourCache[s.s].pts;
+  let pts=null;
+  if(s.t==="ratio"){
+    const ps=s.s.split("=");
+    const resolve=p=>{for(const c of [p,p+"-USD",p+"=F"])if(state.bySym.has(c))return c;return null;};
+    const sn=resolve(ps[0]),sd=resolve(ps[1]);
+    if(sn&&sd){const[pn,pd]=await Promise.all([fetchHourlyOne(sn),fetchHourlyOne(sd)]);
+      if(pn&&pd){const map=new Map(pd.map(p=>[Math.round(p.t/HOUR),p.c]));
+        pts=pn.filter(p=>map.has(Math.round(p.t/HOUR))).map(p=>({t:p.t,c:p.c/map.get(Math.round(p.t/HOUR))}));}}
+  }else{
+    pts=await fetchHourlyOne(s.s);
+  }
+  if(pts&&pts.length){hourCache[s.s]={ts:Date.now(),pts};return pts;}
+  return null;
+}
+function checkpoints(pts){
+  if(!pts||!pts.length)return[];
+  const start=Math.floor(pts[0].t/DAY)*DAY,end=pts[pts.length-1].t;
+  const hours=[0,4,8,12,16,20],out=[];
+  for(let d=start;d<=end;d+=DAY)for(const h of hours){
+    const cp=d+h*HOUR;let best=null,bd=90*60000;
+    for(const p of pts){const dt=Math.abs(p.t-cp);if(dt<bd){bd=dt;best=p;}}
+    if(best)out.push({t:cp,price:best.c,h});}
+  return out;
+}
+/* پیش‌نمایش سیگنال سیشن‌های آینده (با قیمت فعلی) — تا ~۲۶ ساعت بعد */
+function checkpointsFuture(pts){
+  if(!pts||!pts.length)return[];
+  const last=pts[pts.length-1].t,price=pts[pts.length-1].c;
+  const hours=[0,4,8,12,16,20],out=[];
+  const start=Math.floor(last/DAY)*DAY;
+  for(let d=start;d<=start+2*DAY;d+=DAY)for(const h of hours){
+    const cp=d+h*HOUR;
+    if(cp>last+15*60000&&cp<=last+26*HOUR)out.push({t:cp,price,h,future:true});
+  }
+  return out.slice(0,8);
+}
+function sigOfPrice(p,b){if(p>=b.SL&&p<=b.SH)return"Sell";if(p>=b.LL&&p<=b.LH)return"Buy";return"Don't Act";}
+let intraToken=0;
+async function renderIntraday(){
+  const s=state.bySym.get(state.sel);const wrap=$("#intraWrap");
+  if(!s)return;
+  const B=curBands(s);
+  if(!B){wrap.innerHTML="<div class='empty'>بازه هفته جاری (Pred High/Low) موجود نیست</div>";return;}
+  const my=++intraToken;
+  wrap.innerHTML="<div class='empty' style='padding:26px'>در حال دریافت داده ساعتی…</div><div id='intraTip'></div>";
+  const pts=await loadHourly(s);
+  if(my!==intraToken)return; // user switched symbol meanwhile
+  if(!pts){wrap.innerHTML="<div class='empty'>داده ساعتی در دسترس نیست — از صرافی‌ها (OKX/HTX/Bitget/Coinbase/Crypto.com) و Yahoo دریافت نشد؛ اتصال اینترنت را بررسی و دوباره به‌روزرسانی کنید (در حالت آفلاین فقط نمودار هفتگی و سیگنال لحظه‌ای بالا نمایش داده می‌شود)</div>";$("#sessionTable").innerHTML="";return;}
+  const cps=checkpoints(pts);
+  const cpsFut=checkpointsFuture(pts);
+  const W=Math.max(wrap.clientWidth-14,620),H=300,m={t:16,r:70,b:30,l:66},iw=W-m.l-m.r,ih=H-m.t-m.b;
+  const x0=pts[0].t,x1=Math.max(pts[pts.length-1].t,cpsFut.length?cpsFut[cpsFut.length-1].t:0);
+  const X=t=>m.l+((t-x0)/Math.max(1,x1-x0))*iw;
+  let lo=Infinity,hi=-Infinity;
+  pts.forEach(p=>{lo=Math.min(lo,p.c);hi=Math.max(hi,p.c);});
+  lo=Math.min(lo,B.LL);hi=Math.max(hi,B.SH);
+  const pad=(hi-lo)*0.10||Math.abs(hi)*0.05||1;lo=Math.max(lo-pad,0);hi+=pad;
+  const Y=v=>m.t+(1-(v-lo)/(hi-lo))*ih;
+  const yt=niceTicks(lo,hi,5);
+  const step=Math.max(1,Math.ceil(pts.length/6));
+  const NOW=Date.now();
+  let g="";
+  yt.forEach(v=>{const y=Y(v);if(y< m.t||y>m.t+ih)return;g+=`<line x1="${m.l}" y1="${y}" x2="${m.l+iw}" y2="${y}" stroke="#1c2942"/><text x="${m.l-8}" y="${y+4}" fill="#7c8aa0" font-size="11" text-anchor="end" direction="ltr">${fmtC(v)}</text>`;});
+  for(let i=0;i<pts.length;i+=step){const t=pts[i].t;g+=`<text x="${X(t)}" y="${m.t+ih+20}" fill="#7c8aa0" font-size="10.5" text-anchor="middle" direction="ltr">${new Date(t).toISOString().slice(5,10)}</text>`;}
+  g+=`<line x1="${m.l}" y1="${m.t}" x2="${m.l}" y2="${m.t+ih}" stroke="#25344f"/><line x1="${m.l}" y1="${m.t+ih}" x2="${m.l+iw}" y2="${m.t+ih}" stroke="#25344f"/>`;
+  g+=bandSvg(B,m.l,iw,Y,lo,hi);
+  // hourly line
+  const line=pts.map(p=>({t:p.t,v:p.c}));
+  g+=`<path d="${pathOf(line,X,Y)}" fill="none" stroke="#22d3ee" stroke-width="1.8" stroke-linejoin="round"/>`;
+  // hourly signal dots (small)
+  pts.forEach(p=>{const sg=sigOfPrice(p.c,B);if(sg==="Don't Act")return;
+    g+=`<circle cx="${X(p.t)}" cy="${Y(p.c)}" r="2.4" fill="${sg==="Buy"?"#00e676":"#ff1744"}" opacity=".55"/>`;});
+  // NOW line
+  if(NOW>=x0&&NOW<=x1){const x=X(NOW);g+=`<line x1="${x}" y1="${m.t}" x2="${x}" y2="${m.t+ih}" stroke="#e6ecf5" stroke-dasharray="2 4" stroke-width="1.1"/><text x="${x+4}" y="${m.t+11}" fill="#e6ecf5" font-size="10">الان</text>`;}
+  // session checkpoint markers (bright, big) + future previews (hollow)
+  [...cps,...cpsFut].forEach(cp=>{const sg=sigOfPrice(cp.price,B),x=X(cp.t),y=Y(cp.price),fu=!!cp.future;
+    const ttl=`${fmtDT(cp.t)}${fu?" ⏳ پیش‌نمایش با قیمت فعلی":""} — ${sg} @ ${fmtNum(cp.price)}`;
+    const dash=fu?` stroke-dasharray="2 2"`:"";
+    if(sg==="Buy")g+=`<path d="M${x},${y-8} L${x-6},${y+4} L${x+6},${y+4} Z" fill="${fu?"#0d1420":"#00e676"}" stroke="#00e676" stroke-width="${fu?2:1.4}"${dash}><title>${ttl}</title></path>`;
+    else if(sg==="Sell")g+=`<path d="M${x},${y+8} L${x-6},${y-4} L${x+6},${y-4} Z" fill="${fu?"#0d1420":"#ff1744"}" stroke="#ff1744" stroke-width="${fu?2:1.4}"${dash}><title>${ttl}</title></path>`;
+    else g+=`<circle cx="${x}" cy="${y}" r="4.5" fill="${fu?"#0d1420":"#ffc400"}" stroke="#ffc400" stroke-width="${fu?2:1.3}"${dash}><title>${ttl}</title></circle>`;});
+  // current price hline — v2.6.10: همان قیمت زندهٔ جدول/کارت (یاهو)، نه بستهٔ آخرین کندل
+  const cur=priceOf(s)??pts[pts.length-1].c;
+  if(cur>lo&&cur<hi){const y=Y(cur);
+    g+=`<line x1="${m.l}" y1="${y}" x2="${m.l+iw}" y2="${y}" stroke="#e6ecf5" stroke-dasharray="4 4" stroke-width="1"/><text x="${m.l+iw+4}" y="${y+4}" fill="#e6ecf5" font-size="10.5" direction="ltr">الان ${fmtC(cur)}</text>`;
+    g+=`<circle cx="${M_NOWX()}" cy="${y}" r="3.2" fill="#e6ecf5" stroke="#0a0e14" stroke-width="1"/>`;}
+  function M_NOWX(){return X(Math.min(Date.now(),x1));}
+  g+=`<rect id="inHit" x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent"/>`;
+  wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="Tahoma,Segoe UI,Arial">${g}</svg><div id="intraTip"></div>`;
+
+  // session table (future previews first, then history)
+  const rowHtml=(cp)=>{const sg=sigOfPrice(cp.price,B),fu=!!cp.future;
+    return`<tr${fu?' style="opacity:.72"':''}><td class="num" dir="ltr">${fmtLocal(cp.t)}</td><td>${sessionOf(cp.h)}${fu?' <span class="sig sig-none" style="font-size:9px">⏳ آینده</span>':''}</td><td class="num" dir="ltr">${new Date(cp.t).toISOString().slice(11,16)}</td><td class="num">${fu?"~":""}${fmtNum(cp.price)}</td><td><span class="sig ${TS_META[sg].c}">${sg}</span></td></tr>`;};
+  const rows=[...cpsFut].sort((a,b)=>a.t-b.t).map(rowHtml).join("")+[...cps].sort((a,b)=>b.t-a.t).map(rowHtml).join("");
+  $("#sessionTable").innerHTML=`<thead><tr><th>زمان (محلی)</th><th>سیشن</th><th>ساعت UTC</th><th>قیمت</th><th>سیگنال</th></tr></thead><tbody>${rows}</tbody>`;
+
+  // hover tooltip
+  const svg=wrap.querySelector("svg"),tip=wrap.querySelector("#intraTip"),hit=svg.querySelector("#inHit");
+  hit.addEventListener("mousemove",e=>{
+    const rect=svg.getBoundingClientRect(),sc=W/rect.width;
+    const px=(e.clientX-rect.left)*sc;
+    const t=x0+((px-m.l)/iw)*(x1-x0);
+    let best=null,bd=Infinity;pts.forEach(p=>{const d=Math.abs(p.t-t);if(d<bd){bd=d;best=p;}});
+    if(!best)return;
+    const sg=sigOfPrice(best.c,B);
+    tip.innerHTML=`<div style="color:#94a3b8" class="num" dir="ltr">${fmtLocal(best.t)}</div>
+      <div>قیمت: <b class="num">${fmtNum(best.c)}</b></div>
+      <div>سیگنال: <span class="sig ${TS_META[sg].c}">${sg}</span></div>`;
+    tip.style.display="block";
+    const tpx=X(best.t)/sc,tpy=Y(best.c)/sc,flip=tpx>rect.width-190;
+    tip.style.left=(flip?tpx-175:tpx+14)+"px";
+    tip.style.top=Math.min(Math.max(tpy-24,4),rect.height-90)+"px";
+  });
+  hit.addEventListener("mouseleave",()=>{tip.style.display="none";});
+}
+
+/* ═══════════════ Buy/Sell signal sheets ═══════════════ */
+function signalRows(kind){
+  const L=state.list.map(s=>({s,sig:tradeSignal(s),m:mktOf(s),vm:vmOf(s),p:priceOf(s),b:curBands(s)}))
+    .filter(x=>x.sig===kind);
+  L.sort((a,b)=>{
+    const av=a.vm!=null?a.vm:-1,bv=b.vm!=null?b.vm:-1;
+    if(bv!==av)return bv-av;
+    const ac=a.m&&a.m.c24!=null?a.m.c24:-1e18,bc=b.m&&b.m.c24!=null?b.m.c24:-1e18;
+    return bc-ac;});
+  return L;
+}
+const SIG_COLS=[
+  {h:"#",f:(x,i)=>`<span class="num muted">${i+1}</span>`},
+  {h:"نماد",f:x=>`<span class="sym-cell">${esc(x.s.s)}</span>${zoneInv(x.s)?' <span style="cursor:help" title="ناحیه معکوس — پهنای پیش‌بینی زیر ۲٪">⚠️</span>':""}`},
+  {h:"نوع",f:x=>`<span class="ttype tt-${x.s.t}">${TYPE_L[x.s.t]}</span>`},
+  {h:"قیمت فعلی",f:x=>`<b class="num" style="color:var(--cyan)">${fmtNum(x.p)}</b>`},
+  {h:"Pred Low",f:x=>`<span class="num">${fmtNum(x.b?x.b.pl:null)}</span>`},
+  {h:"Pred High",f:x=>`<span class="num">${fmtNum(x.b?x.b.ph:null)}</span>`},
+  {h:"LL",f:x=>`<span class="num pos">${fmtNum(x.b?x.b.LL:null)}</span>`},
+  {h:"LH",f:x=>`<span class="num pos">${fmtNum(x.b?x.b.LH:null)}</span>`},
+  {h:"SL",f:x=>`<span class="num neg">${fmtNum(x.b?x.b.SL:null)}</span>`},
+  {h:"SH",f:x=>`<span class="num neg">${fmtNum(x.b?x.b.SH:null)}</span>`},
+  {h:"24h ٪",f:x=>{const c=x.m?x.m.c24:null;return c!=null?`<bdi class="num ${cls(c)}">${fmtPct(c)}</bdi>`:'<span class="muted">—</span>';}},
+  {h:"والیوم ۲۴h",f:x=>{const v=volOf(x.s);return v!=null?`<span class="num">${fmtC(v)}</span>`:'<span class="muted">—</span>';}},
+  {h:"مارکت‌کپ",f:x=>{const v=mcOf(x.s);return v!=null?`<span class="num">${fmtC(v)}</span>`:'<span class="muted">—</span>';}},
+  {h:"Vol/MC ٪",f:x=>x.vm!=null?`<b class="num" style="color:var(--amber)">${x.vm.toFixed(2)}%</b>`:'<span class="muted">—</span>'},
+  {h:"MAPE",f:x=>x.s.mape!=null?`<span class="num">${x.s.mape.toFixed(2)}%</span>`:"—"}
+];
+function renderSignalTable(id,kind,q){
+  const L=signalRows(kind).filter(x=>!q||x.s.s.toUpperCase().includes(q));
+  const t=$(id);
+  t.querySelector("thead").innerHTML="<tr>"+SIG_COLS.map(c=>`<th>${c.h}</th>`).join("")+"</tr>";
+  t.querySelector("tbody").innerHTML=L.length?
+    L.map((x,i)=>`<tr data-sym="${esc(x.s.s)}" class="${kind==="Buy"?"hl-buy":"hl-sell"}">`+SIG_COLS.map(c=>`<td>${c.f(x,i)}</td>`).join("")+"</tr>").join(""):
+    `<tr><td colspan="${SIG_COLS.length}" class="muted" style="text-align:center; padding:26px">فی‌علاً نمادی با سیگنال ${kind} نیست — با بروزرسانی قیمت‌ها (هر ساعت) این شیت به‌روز می‌شود</td></tr>`;
+  return L.length;
+}
+function renderSignals(){
+  renderSignalTable("#buyTable","Buy",state.qBuy);
+  renderSignalTable("#sellTable","Sell",state.qSell);
+  $("#buyNote").innerHTML=`منطق: قیمت فعلی در بازه <code class="k">LL ≤ قیمت ≤ LH</code> (نزدیک کف پیش‌بینی‌شده هفته جاری) ⇒ فرصت خرید. مرتب‌سازی: بیشترین <b>Vol/MktCap ٪</b> سپس بیشترین <b>تغییر ۲۴ ساعته</b>.`;
+  $("#sellNote").innerHTML=`منطق: قیمت فعلی در بازه <code class="k">SL ≤ قیمت ≤ SH</code> (نزدیک سقف پیش‌بینی‌شده هفته جاری) ⇒ فرصت فروش. مرتب‌سازی: بیشترین <b>Vol/MktCap ٪</b> سپس بیشترین <b>تغییر ۲۴ ساعته</b>.`;
+  renderKPIs();
+}
+$("#qBuy").addEventListener("input",e=>{state.qBuy=e.target.value.trim().toUpperCase();renderSignalTable("#buyTable","Buy",state.qBuy);});
+$("#qSell").addEventListener("input",e=>{state.qSell=e.target.value.trim().toUpperCase();renderSignalTable("#sellTable","Sell",state.qSell);});
+
+/* ═══════════════ metrics table ═══════════════ */
+const COLS=[
+  {k:"s",l:"نماد",v:s=>s.s,h:s=>`<span class="sym-cell">${esc(s.s)}</span>`},
+  {k:"t",l:"نوع",v:s=>s.t,h:s=>`<span class="ttype tt-${s.t}">${TYPE_L[s.t]}</span>`},
+  {k:"tsig",l:"سیگنال",v:s=>{const g=tradeSignal(s);return g==="Sell"?3:g==="Buy"?2:1;},h:s=>{const g=tradeSignal(s);return g?`<span class="sig ${TS_META[g].c}">${g}</span>${zoneInv(s)?'<span style="cursor:help" title="ناحیه معکوس — پهنای پیش‌بینی زیر ۲٪">⚠️</span>':""}`:"—";}},
+  {k:"live",l:"قیمت فعلی",v:s=>priceOf(s)??-Infinity,h:s=>{const p=priceOf(s);return p!=null?`<span class="num" style="color:var(--cyan)">${fmtNum(p)}</span>`:"—";}},
+  {k:"chg24",l:"24h ٪",v:s=>chg24Of(s)??-Infinity,h:s=>{const c=chg24Of(s);return c!=null?`<bdi class="num ${cls(c)}">${fmtPct(c)}</bdi>`:"—";}},
+  {k:"vol24",l:"والیوم ۲۴h",v:s=>volOf(s)??-Infinity,h:s=>{const v=volOf(s);return v!=null?`<span class="num">${fmtC(v)}</span>`:"—";}},
+  {k:"mcap",l:"مارکت‌کپ",v:s=>mcOf(s)??-Infinity,h:s=>{const v=mcOf(s);return v!=null?`<span class="num">${fmtC(v)}</span>`:"—";}},
+  {k:"vm",l:"Vol/MC ٪",v:s=>vmOf(s)??-Infinity,h:s=>{const v=vmOf(s);return v!=null?`<b class="num" style="color:var(--amber)">${v.toFixed(2)}%</b>`:"—";}},
+  {k:"last",l:"آخرین واقعی",v:s=>s.last??-Infinity,h:s=>`<span class="num">${fmtNum(s.last)}</span>`},
+  {k:"f1",l:"+۱ هفته",v:s=>s.f1??-Infinity,h:s=>`<span class="num">${fmtNum(s.f1)}</span>`},
+  {k:"f4",l:"+۴ هفته",v:s=>s.f4??-Infinity,h:s=>`<span class="num">${fmtNum(s.f4)}</span>`},
+  {k:"f15",l:"+۱۵ هفته",v:s=>s.f15??-Infinity,h:s=>`<span class="num" style="font-weight:700">${fmtNum(s.f15)}</span>`},
+  {k:"pct",l:"تغییر پیش‌بینی",v:s=>pctOf(s)??-Infinity,h:s=>{const p=pctOf(s);return`<bdi class="num ${cls(p)}" style="font-weight:700">${fmtPct(p)}</bdi>`;}},
+  {k:"mape",l:"MAPE",v:s=>s.mape??Infinity,h:s=>`<span class="num ${s.mape>15?"neg":s.mape>7?"neu":"pos"}">${s.mape!=null?s.mape.toFixed(2)+"%":"—"}</span>`},
+  {k:"trend",l:"روند ۱۵هفته",v:s=>pctOf(s)??0,h:s=>{const g=signalOf(pctOf(s));return`<span class="sig ${g.c}">${g.l}</span>`;}},
+  {k:"al",l:"⚑",v:s=>Math.abs(pctOf(s)??0),h:s=>Math.abs(pctOf(s)??0)>=state.th?"⚡":""}
+];
+function filteredSorted(){
+  let L=state.list.filter(s=>{
+    if(state.ftype!=="all"&&s.t!==state.ftype)return false;
+    if(state.fsig!=="all"&&tradeSignal(s)!==state.fsig)return false;
+    if(state.q&&!s.s.toUpperCase().includes(state.q))return false;
+    return true;});
+  const col=COLS.find(c=>c.k===state.sort.key)||COLS[11];
+  const d=state.sort.dir;
+  L=[...L].sort((a,b)=>{const va=col.v(a),vb=col.v(b);
+    if(typeof va==="string")return va.localeCompare(vb)*d;
+    return(va-vb)*d;});
+  return L;
+}
+function renderTable(){
+  $("#metricsTable").querySelector("thead").innerHTML="<tr>"+COLS.map(c=>
+    `<th data-k="${c.k}">${c.l}${state.sort.key===c.k?(state.sort.dir>0?" ▲":" ▼"):""}</th>`).join("")+"</tr>";
+  const L=filteredSorted();
+  $("#tblBody").innerHTML=L.map(s=>`<tr data-sym="${esc(s.s)}">`+COLS.map(c=>`<td>${c.h(s)}</td>`).join("")+"</tr>").join("");
+  $("#tblCount").textContent=`${L.length} نماد`;
+  $$("#metricsTable thead th").forEach(th=>th.addEventListener("click",()=>{
+    const k=th.dataset.k;
+    if(state.sort.key===k)state.sort.dir*=-1;else state.sort={key:k,dir:(k==="s"||k==="t")?1:-1};
+    renderTable();}));
+}
+$("#tblSearch").addEventListener("input",e=>{state.q=e.target.value.trim().toUpperCase();renderTable();});
+$("#typeFilter").addEventListener("change",e=>{state.ftype=e.target.value;renderTable();});
+$("#sigFilter").addEventListener("change",e=>{state.fsig=e.target.value;renderTable();});
+
+function exportCSV(){
+  const L=filteredSorted();
+  const head=["Symbol","Type","Signal","Price","Chg24_%","Volume24h_USD","MarketCap_USD","Vol_MC_%","Last_Actual","F_1W","F_4W","F_15W","Forecast_Change_%","MAPE_%","Trend","PredLow_Week","PredHigh_Week","LL","LH","SL","SH"];
+  const lines=L.map(s=>{const p=pctOf(s),c=chg24Of(s),b=curBands(s),r=curWeekRow(s);
+    return[s.s,s.t,tradeSignal(s)||"",priceOf(s)??"",c!=null?c.toFixed(2):"",volOf(s)??"",mcOf(s)??"",vmOf(s)!=null?vmOf(s).toFixed(2):"",
+      s.last??"",s.f1??"",s.f4??"",s.f15??"",p!=null?p.toFixed(2):"",s.mape??"",signalOf(p).l,
+      r?r.pl:"",r?r.ph:"",b?b.LL.toPrecision(7):"",b?b.LH.toPrecision(7):"",b?b.SL.toPrecision(7):"",b?b.SH.toPrecision(7):""].join(",");});
+  dl(new Blob(["\ufeff"+head.join(",")+"\n"+lines.join("\n")],{type:"text/csv;charset=utf-8"}),
+    "forecast_metrics_"+new Date().toISOString().slice(0,10)+".csv");
+}
+
+/* ═══════════════ XLSX builder (pure, no deps) ═══════════════ */
+/*XLSX-BEGIN*/
+function _crc32(bytes){let c,T=_crc32.T;if(!T){T=_crc32.T=new Uint32Array(256);for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);T[n]=c>>>0;}}
+  let crc=0xFFFFFFFF;for(let i=0;i<bytes.length;i++)crc=T[(crc^bytes[i])&255]^(crc>>>8);return(crc^0xFFFFFFFF)>>>0;}
+const _enc=s=>new TextEncoder().encode(s);
+function _u8(dv){return new Uint8Array(dv.buffer);}
+function zipStore(entries){ // [{name, data:Uint8Array}]
+  const chunks=[],central=[];let off=0;
+  for(const e of entries){
+    const name=_enc(e.name),data=e.data,crc=_crc32(data);
+    const lh=new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);
+    lh.setUint16(8,0,true);lh.setUint16(10,0,true);lh.setUint16(12,0,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,data.length,true);lh.setUint32(22,data.length,true);
+    lh.setUint16(26,name.length,true);lh.setUint16(28,0,true);
+    chunks.push(_u8(lh),name,data);
+    const ch=new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);
+    ch.setUint16(10,0,true);ch.setUint16(12,0,true);ch.setUint16(14,0,true);
+    ch.setUint32(16,crc,true);ch.setUint32(20,data.length,true);ch.setUint32(24,data.length,true);
+    ch.setUint16(28,name.length,true);ch.setUint16(30,0,true);ch.setUint16(32,0,true);
+    ch.setUint16(34,0,true);ch.setUint16(36,0,true);ch.setUint32(38,0,true);ch.setUint32(42,off,true);
+    central.push(_u8(ch),name);
+    off+=30+name.length+data.length;
+  }
+  let csize=0;central.forEach(x=>{csize+=x.length;});
+  const eo=new DataView(new ArrayBuffer(22));
+  eo.setUint32(0,0x06054b50,true);eo.setUint16(4,0,true);eo.setUint16(6,0,true);
+  eo.setUint16(8,entries.length,true);eo.setUint16(10,entries.length,true);
+  eo.setUint32(12,csize,true);eo.setUint32(16,off,true);eo.setUint16(20,0,true);
+  const total=off+csize+22,out=new Uint8Array(total);let p=0;
+  const put=x=>{out.set(x,p);p+=x.length;};
+  chunks.forEach(put);central.forEach(put);put(_u8(eo));
+  return out;
+}
+function _xesc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&apos;"}[c]));}
+function colName(i){let s="";i++;while(i>0){const md=(i-1)%26;s=String.fromCharCode(65+md)+s;i=Math.floor((i-1)/26);}return s;}
+function sheetXML(cols,rows,cw){
+  let x='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">';
+  if(cw)x+="<cols>"+cols.map((c,i)=>`<col min="${i+1}" max="${i+1}" width="${cw[i]||14}" customWidth="1"/>`).join("")+"</cols>";
+  x+="<sheetData>";
+  const all=[cols,...rows];
+  all.forEach((row,ri)=>{x+=`<row r="${ri+1}">`;row.forEach((v,ci)=>{const ref=colName(ci)+(ri+1);
+    if(typeof v==="number"&&isFinite(v))x+=`<c r="${ref}"><v>${v}</v></c>`;
+    else if(v===null||v===undefined)x+=`<c r="${ref}"/>`;
+    else x+=`<c r="${ref}" t="inlineStr"><is><t>${_xesc(v)}</t></is></c>`;});x+="</row>";});
+  return x+"</sheetData></worksheet>";
+}
+function buildXLSX(sheets){ // sheets: [{name, cols:[], rows:[[]], widths:[]}]
+  const ct='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>'+
+    sheets.map((s,i)=>`<Override PartName="/xl/worksheets/sheet${i+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")+"</Types>";
+  const rels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>';
+  const wbrels='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+
+    sheets.map((s,i)=>`<Relationship Id="rId${i+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${i+1}.xml"/>`).join("")+"</Relationships>";
+  const wb='<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+
+    sheets.map((s,i)=>`<sheet name="${_xesc(s.name).slice(0,28)}" sheetId="${i+1}" r:id="rId${i+1}"/>`).join("")+"</sheets></workbook>";
+  const files=[
+    {name:"[Content_Types].xml",data:_enc(ct)},
+    {name:"_rels/.rels",data:_enc(rels)},
+    {name:"xl/workbook.xml",data:_enc(wb)},
+    {name:"xl/_rels/workbook.xml.rels",data:_enc(wbrels)}];
+  sheets.forEach((s,i)=>files.push({name:`xl/worksheets/sheet${i+1}.xml`,data:_enc(sheetXML(s.cols,s.rows,s.widths))}));
+  return zipStore(files);
+}
+/*XLSX-END*/
+
+const SIG_XLSX_COLS=["Symbol","Type","Signal","Price","Pred_Low_Week","Pred_High_Week","LL","LH","SL","SH","Chg24_%","Volume24h_USD","MarketCap_USD","Vol_MC_%","MAPE_%","Week_Date","Generated_At"];
+function sigSheetRows(kind){
+  return signalRows(kind).map(x=>{
+    const r=curWeekRow(x.s);
+    return[x.s.s,TYPE_L[x.s.t],kind,
+      x.p!=null?+x.p.toPrecision(8):null,
+      r&&r.pl!=null?+r.pl.toPrecision(8):null, r&&r.ph!=null?+r.ph.toPrecision(8):null,
+      x.b?+x.b.LL.toPrecision(8):null, x.b?+x.b.LH.toPrecision(8):null,
+      x.b?+x.b.SL.toPrecision(8):null, x.b?+x.b.SH.toPrecision(8):null,
+      x.m&&x.m.c24!=null?+x.m.c24.toFixed(3):null,
+      x.m&&x.m.v!=null?Math.round(x.m.v):null, x.m&&x.m.mc!=null?Math.round(x.m.mc):null,
+      x.vm!=null?+x.vm.toFixed(3):null, x.s.mape!=null?+x.s.mape.toFixed(3):null,
+      r?r.d:"", new Date().toISOString().slice(0,16).replace("T"," ")+" UTC"];
+  });
+}
+function downloadSignalsXLSX(which){
+  const sheets=[];
+  const w=[14,10,9,14,14,14,14,14,14,14,10,16,16,10,9,12,20];
+  if(which!=="sell")sheets.push({name:"Buy_Signals",cols:SIG_XLSX_COLS,rows:sigSheetRows("Buy"),widths:w});
+  if(which!=="buy")sheets.push({name:"Sell_Signals",cols:SIG_XLSX_COLS,rows:sigSheetRows("Sell"),widths:w});
+  if(!sheets.length||!sheets[0].rows.length&&sheets.length===1){toast("داده‌ای برای خروجی موجود نیست","warn");return;}
+  const bytes=buildXLSX(sheets);
+  const stamp=new Date().toISOString().slice(0,13).replace("T","_");
+  dl(new Blob([bytes],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
+    `signals_${which}_${stamp}.xlsx`);
+  toast(`فایل اکسل سیگنال‌ها دانلود شد (${sheets.map(s=>s.rows.length).join(" + ")} ردیف) ✔`,"ok");
+}
+$("#xlsxBuyBtn").addEventListener("click",()=>downloadSignalsXLSX("buy"));
+$("#xlsxSellBtn").addEventListener("click",()=>downloadSignalsXLSX("sell"));
+$("#xlsxBothBtn1").addEventListener("click",()=>downloadSignalsXLSX("both"));
+$("#xlsxBothBtn2").addEventListener("click",()=>downloadSignalsXLSX("both"));
+$("#xlsxBothBtn3").addEventListener("click",()=>downloadSignalsXLSX("both"));
+
+$("#csvBtn").addEventListener("click",exportCSV);
+$("#csvBtn2").addEventListener("click",exportCSV);
+$("#jsonBtn").addEventListener("click",()=>{dl(new Blob([JSON.stringify(window.DASHBOARD_DATA)],{type:"application/json"}),"dashboard_data.json");});
+$("#svgBtn").addEventListener("click",()=>{
+  const svg=$("#chartWrap svg");if(!svg){toast("نموداری موجود نیست","warn");return;}
+  svg.setAttribute("xmlns","http://www.w3.org/2000/svg");
+  dl(new Blob([svg.outerHTML],{type:"image/svg+xml"}),(state.sel||"chart").replace(/[^\w=-]/g,"_")+".svg");
+});
+function openLocal(path){
+  if(!path){toast("مسیر موجود نیست — ابتدا اسکریپت R را اجرا کنید","warn");return;}
+  const url="file:///"+encodeURI(path.replace(/\\/g,"/"));
+  const a=document.createElement("a");a.href=url;a.target="_blank";a.rel="noopener";
+  document.body.appendChild(a);a.click();a.remove();
+  toast("اگر باز نشد، از «📋 کپی مسیر اکسل» استفاده و مسیر را در Windows Explorer بچسبانید");
+}
+$("#excelBtn").addEventListener("click",()=>openLocal(state.excel));
+$("#folderBtn").addEventListener("click",()=>{
+  if(!state.excel){toast("مسیر خروجی موجود نیست","warn");return;}
+  openLocal(state.excel.replace(/\\/g,"/").replace(/\/[^\/]+$/,""));
+});
+$("#copyExcelBtn").addEventListener("click",async()=>{
+  if(!state.excel){toast("مسیر اکسل موجود نیست","warn");return;}
+  try{await navigator.clipboard.writeText(state.excel);toast("مسیر اکسل کپی شد ✔","ok");}
+  catch(e){prompt("کپی دستی مسیر اکسل:",state.excel);}
+});
+
+/* ═══════════════ ranking ═══════════════ */
+function barRows(items,metric,color){
+  const mx=Math.max(...items.map(x=>Math.abs(metric(x))),1e-9);
+  return items.map(x=>{const v=metric(x);
+    return`<div class="bar-row" data-sym="${esc(x.s)}"><span class="bl">${esc(x.s)}</span>
+    <span class="bt"><span class="bf" style="width:${(Math.abs(v)/mx*100).toFixed(1)}%;background:${color};display:block"></span></span>
+    <bdi class="bv ${cls(v)}">${fmtPct(v)}</bdi></div>`;}).join("");
+}
+function renderRanking(){
+  const allP=state.list.filter(s=>pctOf(s)!=null);
+  const withPct=allP.filter(s=>Math.abs(pctOf(s))<=300);
+  const nOut=allP.length-withPct.length;
+  const outNote=nOut?`<div class="muted" style="font-size:10.5px; padding:4px">${nOut} نماد با تغییر پیش‌بینی پرت (|Δ|>۳۰۰٪) حذف شد</div>`:"";
+  $("#rankUp").innerHTML=(barRows([...withPct].sort((a,b)=>pctOf(b)-pctOf(a)).slice(0,10),pctOf,"#34d399")||'<div class="muted">—</div>')+outNote;
+  $("#rankDown").innerHTML=barRows([...withPct].sort((a,b)=>pctOf(a)-pctOf(b)).slice(0,10),pctOf,"#f87171")||'<div class="muted">—</div>';
+  const vm=state.list.map(s=>({s,v:vmOf(s)})).filter(x=>x.v!=null&&isFinite(x.v)).sort((a,b)=>b.v-a.v).slice(0,10);
+  const mxv=Math.max(...vm.map(x=>x.v),1e-9);
+  $("#rankVM").innerHTML=vm.length?vm.map(({s,v})=>`<div class="bar-row" data-sym="${esc(s.s)}"><span class="bl">${esc(s.s)}</span>
+    <span class="bt"><span class="bf" style="width:${(v/mxv*100).toFixed(1)}%;background:#fbbf24;display:block"></span></span>
+    <bdi class="bv" style="color:var(--amber)">${v.toFixed(2)}%</bdi></div>`).join(""):'<div class="muted">در انتظار داده مارکت‌کپ…</div>';
+  const bm=state.list.filter(s=>s.mape!=null).sort((a,b)=>a.mape-b.mape).slice(0,10);
+  const mx2=Math.max(...bm.map(s=>s.mape),1);
+  $("#rankMape").innerHTML=bm.map(s=>`<div class="bar-row" data-sym="${esc(s.s)}"><span class="bl">${esc(s.s)}</span>
+    <span class="bt"><span class="bf" style="width:${(s.mape/mx2*100).toFixed(1)}%;background:#22d3ee;display:block"></span></span>
+    <bdi class="bv" style="color:var(--cyan)">${s.mape.toFixed(2)}%</bdi></div>`).join("");
+}
+
+/* ═══════════════ alerts ═══════════════ */
+function renderAlerts(){
+  $("#thVal").textContent=state.th+"%";
+  const L=state.list.map(s=>({s,p:pctOf(s)})).filter(x=>x.p!=null&&Math.abs(x.p)>=state.th)
+    .sort((a,b)=>Math.abs(b.p)-Math.abs(a.p));
+  $("#alertGrid").innerHTML=L.map(({s,p})=>{
+    const g=signalOf(p);
+    return`<div class="acard" data-sym="${esc(s.s)}">
+      <div class="hh"><b>${esc(s.s)}</b><span class="ttype tt-${s.t}">${TYPE_L[s.t]}</span></div>
+      <div class="pct ${cls(p)}" dir="ltr" style="text-align:end">${p>0?"▲":"▼"} ${fmtPct(p)}</div>
+      <div style="font-size:11.5px;color:var(--muted)"><span class="num">${fmtNum(baseOf(s))}</span> ← فعلی &nbsp;|&nbsp; پیش‌بینی: <b class="num ${cls(p)}">${fmtNum(s.f15)}</b></div>
+      <div class="ft">پیش‌بینی مدل برای ۱۵ هفته آینده • MAPE: <span class="num">${s.mape!=null?s.mape.toFixed(1)+"%":"—"}</span> • <span class="sig ${g.c}">${g.l}</span></div>
+    </div>`;}).join("");
+  $("#alertEmpty").style.display=L.length?"none":"block";
+}
+$("#thRange").addEventListener("input",e=>{state.th=+e.target.value;savePrefs();renderAlerts();renderKPIs();});
+
+/* ═══════════════ live engines: Yahoo quotes + market data ═══════════════ */
+function fetchT(url,ms){const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);
+  return fetch(url,{signal:c.signal,cache:"no-store",redirect:"follow"}).finally(()=>clearTimeout(t));}
+function yahooURLs(sym,params){
+  const core=h=>`https://${h}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?${params}`;
+  const u1=core("query1"),u2=core("query2");
+  return[u1,u2,
+    "https://r.jina.ai/"+u1,"https://r.jina.ai/"+u2, // v2.6.5: تنها مسیر پایدار یاهو از مرورگر — اولویت بالا
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(u1),
+    "https://corsproxy.io/?url="+encodeURIComponent(u1),
+    "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u1)];
+}
+// v2.6: قیمت تکی از صرافی‌های مستقیم با CORS آزاد (OKX/HTX/Bitget/Coinbase/Kraken)
+async function fetchQuoteEx(base){
+  const srcs=[
+    ["okx",`https://www.okx.com/api/v5/market/ticker?instId=${base}-USDT`,
+      j=>{const d=j&&j.data&&j.data[0];return d&&+d.last>0?{price:+d.last,prev:+d.open24h||null,time:Date.now(),via:"okx"}:null;}],
+    ["htx",`https://api.huobi.pro/market/detail/merged?symbol=${base.toLowerCase()}usdt`,
+      j=>{const d=j&&j.tick;return d&&+d.close>0?{price:+d.close,prev:+d.open||null,time:Date.now(),via:"htx"}:null;}],
+    ["bitget",`https://api.bitget.com/api/v2/spot/market/tickers?symbol=${base}USDT`,
+      j=>{const d=j&&j.data&&j.data[0];return d&&+d.lastPr>0?{price:+d.lastPr,prev:+d.open||null,time:Date.now(),via:"bitget"}:null;}],
+    ["coinbase",`https://api.exchange.coinbase.com/products/${base}-USD/stats`,
+      j=>j&&+j.last>0?{price:+j.last,prev:+j.open||null,time:Date.now(),via:"coinbase"}:null],
+    ["kraken",`https://api.kraken.com/0/public/Ticker?pair=${base}USD`,
+      j=>{const r=j&&j.result,k=r&&Object.keys(r)[0],d=k&&r[k];return d&&d.c&&+d.c[0]>0?{price:+d.c[0],prev:d.o?+d.o:null,time:Date.now(),via:"kraken"}:null;}],
+  ];
+  for(const [nm,u,f] of srcs){
+    try{const r=await fetchT(u,7000);if(!r.ok)continue;
+      const q=f(await r.json());if(q)return q;
+    }catch(e){}
+  }
+  return null;
+}
+// v2.6.6: کالاها «یاهو-اول» — عدد دقیقاً همان قیمت سایت Yahoo Finance باشد؛ توکن طلای صرافی فقط جایگزین اضطراری
+const COMMODITY_KIND=s=>/^(GC=F|XAUUSD=X|XAU=X|XAUTUSD)$/i.test(s)?"gold":/^(SI=F|XAGUSD=X|XAG=X)$/i.test(s)?"silver":/^CL=F$/i.test(s)?"wti":/^BZ=F$/i.test(s)?"brent":null;
+async function fetchCommodityQuote(sym){
+  const kind=COMMODITY_KIND(sym); if(!kind)return null;
+  const y=await fetchQuote(sym).catch(()=>null);        // ۱) خودِ یاهو (query1/query2 → پراکسی متن‌خوان jina) — همان عدد سایت
+  if(y&&y.price>0)return y;
+  if(kind==="gold"){ // ۲) جایگزین اضطراری وقتی یاهو در دسترس نیست: XAUT/PAXG ≈ اسپات طلا (ممکن است چند دلار با فیوچرز یاهو اختلاف داشته باشد)
+    for(const tk of ["XAUT","PAXG"]){
+      const r=await fetchQuoteEx(tk).catch(()=>null);
+      if(r)return{...r,via:r.via+"·"+tk+" ≈"};
+    }
+  }
+  return null;
+}
+async function asJson(r){ // v2.6.5: پاسخ json یا متنِ پیچیده‌شدهٔ r.jina.ai — بدنه فقط یک‌بار خوانده شود! (v2.6.7: spark/finance هم)
+  const t=await r.text();
+  try{return JSON.parse(t);}catch(e){}
+  const mm=t.match(/\{"(?:chart|spark|finance|quoteResponse)"/);
+  const i=mm?mm.index:-1,k=t.lastIndexOf("}");
+  if(i>=0&&k>i)return JSON.parse(t.slice(i,k+1));
+  throw new Error("not-json");
+}
+// v2.6.8: قیمت «همهٔ نمادها» دقیقاً = خودِ Yahoo Finance — درخواست گروهی spark (حداکثر ۲۰ نماد/درخواست، از مسیر پراکسی متن‌خوان jina)
+// مدارشکن jina: سهمیهٔ سرویس رایگان ~۲۰ درخواست/دقیقه است؛ با سه شکست پیاپی، ۲ دقیقه تلاش متوقف می‌شود تا بن نشود
+let jinaDownUntil=0,jinaStreak=0;const JINA_OK=()=>Date.now()>jinaDownUntil;
+function jinaTrip(){if(jinaDownUntil<Date.now())jinaDownUntil=Date.now()+120000;}
+function jinaFail(){jinaStreak++;if(jinaStreak>=3)jinaTrip();} // شمارندهٔ سراسری: از هر مسیر (تکه/تکی/v8) — ۳ شکست پیاپی = بن ۲دقیقه‌ای
+function jinaHit(){jinaStreak=0;}
+async function jinaAttempt(url,ms){ // true/false = موفقیت؛ پاسخ خام برمی‌گرداند تا مصرف‌کننده پارس کند
+  try{const r=await fetchT(url,ms);if(!r.ok){jinaFail();return null;}jinaHit();return r;}
+  catch(e){jinaFail();return null;}
+}
+async function fetchYahooSparkBatch(syms,onProg){
+  const out={};if(!syms.length||!JINA_OK())return out;
+  const chunks=[];for(let i=0;i<syms.length;i+=20)chunks.push(syms.slice(i,i+20));
+  const total=chunks.length;let done=0;
+  const workers=Array.from({length:Math.min(3,total)},async()=>{
+    while(chunks.length){
+      if(!JINA_OK()){chunks.length=0;break;}
+      const ch=chunks.shift();
+      const core=h=>`https://${h}.finance.yahoo.com/v7/finance/spark?symbols=${ch.map(encodeURIComponent).join("%2C")}&range=1d&interval=1d&_ts=${Date.now()}`;
+      for(const u of ["https://r.jina.ai/"+core("query1"),"https://r.jina.ai/"+core("query2")]){
+        const r=await jinaAttempt(u,16000);if(!r)continue;
+        try{
+          const j=await asJson(r);const res=j&&j.spark&&j.spark.result;
+          if(!Array.isArray(res))continue;
+          for(const it of res){const a=it&&it.response&&it.response[0],m=a&&a.meta;
+            const p2=m&&(m.regularMarketPrice??m.previousClose);
+            if(it.symbol&&p2>0)out[it.symbol]={price:p2,prev:m.chartPreviousClose??m.previousClose??null,
+              time:Date.now(),mktTime:m.regularMarketTime?m.regularMarketTime*1000:null,via:"yahoo"};}
+          break;
+        }catch(e){}
+      }
+      if(!JINA_OK())chunks.length=0; // مدارشکن سراسری توسط jinaAttempt فعال شده
+      done++;if(onProg)onProg(Math.min(done,total),total); // تکهٔ ناموفق: در «پاس دوم» بعداً دوباره تلاش می‌شود
+    }});
+  await Promise.all(workers);
+  return out;
+}
+async function fetchSparkOne(sym){const r=await fetchYahooSparkBatch([sym]).catch(()=>({}));return r[sym]||null;} // قیمت تکی یاهو (ارزان: ۱ درخواست)
+async function fetchQuote(sym,fast){
+  let urls=yahooURLs(sym,"range=2d&interval=1d");
+  if(fast)urls=urls.filter(u=>!u.includes("allorigins")&&!u.includes("corsproxy")&&!u.includes("codetabs")); // v2.6.8: حالت سریع — بدون پروکسی‌های کند ۸-۱۲ثانیه‌ای
+  for(const u of urls){
+    const isJina=u.startsWith("https://r.jina.ai/");
+    if(isJina&&!JINA_OK())continue; // v2.6.8 مدارشکن: وقتی jina بن شده اصلاً تلاش نشود (سهمیه حفظ شود)
+    let r=null;
+    if(isJina){r=await jinaAttempt(u,13000);if(!r)continue;}
+    else{try{r=await fetchT(u,8000);}catch(e){continue;}if(!r.ok)continue;}
+    try{
+      const j=await asJson(r);const res=j&&j.chart&&j.chart.result&&j.chart.result[0];
+      const m=res&&res.meta;const price=m&&(m.regularMarketPrice??m.previousClose);
+      if(price>0)return{price,prev:m.chartPreviousClose??m.previousClose??null,
+        time:m.regularMarketTime?m.regularMarketTime*1000:Date.now(),via:isJina?"jina":"yahoo"};
+    }catch(e){}
+  }
+  return null;
+}
+function ratioComponents(name){
+  const ps=name.split("=");if(ps.length!==2)return null;
+  const find=p=>{const cands=[p,p+"-USD",p+"=F"];for(const c of cands){if(state.live.map[c])return state.live.map[c];}return null;};
+  const n=find(ps[0]),d=find(ps[1]);
+  if(n&&d&&d.price)return{price:n.price/d.price,prev:(n.prev&&d.prev)?n.prev/d.prev:null,time:Math.max(n.time,d.time)};
+  return null;
+}
+/* ─── market data: CoinPaprika (primary) → CoinGecko (fallback) ─── */
+async function fetchMarkets(){
+  try{
+    const urls=["https://api.coinpaprika.com/v1/tickers?quotes=USD",
+      "https://api.allorigins.win/raw?url="+encodeURIComponent("https://api.coinpaprika.com/v1/tickers?quotes=USD")];
+    for(const u of urls){
+      try{const r=await fetchT(u,20000);if(!r.ok)continue;
+        const j=await r.json();if(!Array.isArray(j)||j.length<100)continue;
+        const map={};
+        for(const it of j){const S=(it.symbol||"").toUpperCase();if(!S||map[S])continue;
+          const q=it.quotes&&it.quotes.USD;if(!q)continue;
+          map[S]={p:q.price,c24:q.percent_change_24h,v:q.volume_24h,mc:q.market_cap};}
+        if(Object.keys(map).length>100){state.mkt=map;state.mktAt=Date.now();return"paprika";}
+      }catch(e){}
+    }
+  }catch(e){}
+  try{
+    const map={};
+    for(const pg of[1,2]){
+      const u=`https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=${pg}&price_change_percentage=24h`;
+      const prox="https://api.allorigins.win/raw?url="+encodeURIComponent(u);
+      for(const uu of[u,prox]){
+        try{const r=await fetchT(uu,18000);if(!r.ok)continue;
+          const j=await r.json();
+          for(const it of j){const S=(it.symbol||"").toUpperCase();if(!S||map[S])continue;
+            map[S]={p:it.current_price,c24:it.price_change_percentage_24h??(it.price_change_percentage_24h_in_currency||null),v:it.total_volume,mc:it.market_cap};}
+          break;
+        }catch(e){}
+      }
+    }
+    if(Object.keys(map).length>100){state.mkt=map;state.mktAt=Date.now();return"gecko";}
+  }catch(e){}
+  return null;
+}
+// v2.5: 🏦 منابع صرافی با CORS آزاد (OKX/Bitget/CoinLore) — پرکردن جاهای خالی مارکت‌دیتا، هرکدام ۱ درخواست
+async function mergeExchangeMarkets(){
+  const need=new Set(state.list.filter(s=>s.t==="crypto").map(s=>s.s.replace(/-USD$/i,"").toUpperCase()).filter(S=>!state.mkt[S]));
+  if(!need.size)return;
+  const put=(S,rec)=>{if(need.has(S)&&!state.mkt[S]&&rec&&rec.p>0)state.mkt[S]=rec;};
+  // v2.6: هر سه منبع موازی (به‌جای ترتیبی) — روی اتصال‌های کند سریع‌تر
+  const [okxD,bgD,pages]=await Promise.all([
+    (async()=>{try{const r=await fetchT("https://www.okx.com/api/v5/market/tickers?instType=SPOT",12000);
+      return r.ok?((await r.json()).data||[]):[];}catch(e){return[];}})(),
+    (async()=>{try{const r=await fetchT("https://api.bitget.com/api/v2/spot/market/tickers",12000);
+      return r.ok?((await r.json()).data||[]):[];}catch(e){return[];}})(),
+    Promise.all([...Array(10)].map(async(_,i)=>{
+      try{const r=await fetchT(`https://api.coinlore.net/api/tickers/?start=${i*100}&limit=100`,12000);
+        const j=r.ok?await r.json():null;return (j&&j.data)||[];}catch(e){return[];}
+    })),
+  ]);
+  for(const it of okxD){const m=/^([A-Z0-9]+)-USDT$/.exec(it.instId||"");if(!m)continue;
+    const last=+it.last,op=+it.open24h;
+    if(last>0)put(m[1],{p:last,c24:op>0?(last/op-1)*100:null,v:+it.volCcy24h||null,mc:null});}
+  for(const it of bgD){const m=/^([A-Z0-9]+)USDT$/.exec(it.symbol||"");if(!m)continue;
+    const last=+it.lastPr;
+    if(last>0)put(m[1],{p:last,c24:it.change24h!=null?+it.change24h*100:null,v:+it.usdtVolume||null,mc:null});}
+  for(const arr of pages)for(const it of arr){const S=(it.symbol||"").toUpperCase();
+    const p=+it.price_usd;
+    if(p>0)put(S,{p,c24:it.percent_change_24h!=null?+it.percent_change_24h:null,v:+it.volume24||null,mc:+it.market_cap_usd||null});}
+}
+async function refreshLive(manual){
+  if(state.live.running)return;
+  if(!state.list.length){toast("ابتدا داده مدل را بارگذاری کنید","warn");return;}
+  state.live.running=true;state.live.ok=0;state.live.fail=0;
+  $("#liveDot").className="dot busy";
+  $("#liveStatus").textContent="دریافت مارکت‌دیتا (۱ درخواست)…";
+  const t0=Date.now();
+  // v2.6.8: نمایش میان‌چرخه — به‌محض پرشدن قیمت‌ها، کارت/جدول/تیکر تازه شوند (حتی اگر باقیمانده هنوز در صف باشد)
+  const quickRepaint=()=>{renderTicker();renderTable();renderSignals();renderRanking();renderAlerts();renderKPIs();
+    if(state.sel){const ss=state.bySym.get(state.sel);if(ss){renderStatChips(ss);renderBandChips(ss);}}};
+
+  // ⭐ مرحله -۱ (v2.6.9): قیمت‌های R (live_prices.js) — یاهوی مستقیمِ بی‌واسطه؛ بالاترین اولویت
+  await loadLiveYf();
+  if(state.rYfCount)quickRepaint();
+  // ورودیِ تازهٔ R مثل قیمتِ همین چرخه محافظت می‌شود — پاپریکا/صرافی بازنویسیش نکند
+  const freshOK=L=>L&&(L.time>t0||(L.via==="r-yahoo"&&Date.now()-L.time<RYF_TTL));
+
+  // 🎯 مرحله ۰ (v2.6.7): قیمت «خودِ Yahoo Finance» برای همه نمادها — درخواست گروهی spark، هرکدام تا ۲۰ نماد (مبنای مقایسهٔ کاربر)
+  try{
+    const allSyms=state.list.filter(s=>s.t!=="ratio").map(s=>s.s);
+    const yb=await fetchYahooSparkBatch(allSyms,(d,t2)=>{$("#liveStatus").textContent=`قیمت‌های Yahoo Finance… ${d}/${t2}`;});
+    for(const sym in yb){
+      if(freshOK(state.live.map[sym]))continue; // v2.6.1: قیمت تازه‌تر (رفرش لحظه‌ای نماد) بازنویسی نشود
+      state.live.map[sym]=yb[sym];state.live.ok++;
+    }
+    quickRepaint(); // ← عدد یاهو همان چند ثانیه اول روی کارت/جدول می‌نشیند
+  }catch(e){}
+
+  // ⚡ مرحله ۱: پوشش جاهای خالی یاهو با CoinPaprika/CoinGecko (۱ درخواست)
+  const mksrc=await fetchMarkets();
+  let mktHits=0;
+  if(Object.keys(state.mkt).length){
+    for(const s of state.list){
+      if(s.t!=="crypto")continue;
+      if(freshOK(state.live.map[s.s]))continue; // v2.6.1: قیمت تازه‌تر (رفرش لحظه‌ای نماد) بازنویسی نشود
+      const m=mktOf(s);
+      if(m&&m.p){
+        state.live.map[s.s]={price:m.p,
+          prev:(m.c24!=null&&m.c24!==-100)?m.p/(1+m.c24/100):null,
+          time:state.mktAt||Date.now(),via:mksrc||"mkt"};
+        state.live.ok++;mktHits++;
+      }
+    }
+  }
+
+  // 🏦 مرحله ۱.۵: رمزارزهای جامانده از صرافی‌ها (OKX/Bitget/CoinLore) — چند درخواست تک‌ضرب
+  const exBefore=state.live.ok;
+  await mergeExchangeMarkets();
+  for(const s of state.list){
+    if(s.t!=="crypto"||state.live.map[s.s])continue;
+    const m=mktOf(s);
+    if(m&&m.p){state.live.map[s.s]={price:m.p,
+      prev:(m.c24!=null&&m.c24!==-100)?m.p/(1+m.c24/100):null,
+      time:Date.now(),via:"ex"};
+      state.live.ok++;}
+  }
+  const exHits=state.live.ok-exBefore;
+  if(state.live.ok)quickRepaint(); // v2.6.8: نمایش میان‌چرخه بعد از پرشدن‌های صرافی
+
+  // 🔁 مرحله ۱.۸ (v2.6.8): «پاس دوم» یاهو برای جامانده‌ها — شکستِ یک تکهٔ spark، ۲۰ نماد را یکجا می‌اندازد؛ با مکث کوتاه دوباره گروهی تلاش می‌کنیم (بدون سوزاندن سهمیهٔ jina با درخواست‌های تکی)
+  try{
+    const miss=state.list.filter(s=>s.t!=="ratio"&&!state.live.map[s.s]).map(s=>s.s);
+    if(miss.length&&JINA_OK()){
+      $("#liveStatus").textContent=`تلاش مجدد Yahoo برای ${miss.length} نماد…`;
+      await new Promise(r=>setTimeout(r,5000));
+      const yb2=await fetchYahooSparkBatch(miss,(d,t2)=>{$("#liveStatus").textContent=`تلاش مجدد Yahoo… ${d}/${t2}`;});
+      let n2=0;
+      for(const sym in yb2){if(freshOK(state.live.map[sym]))continue;state.live.map[sym]=yb2[sym];state.live.ok++;n2++;}
+      if(n2)quickRepaint();
+    }
+  }catch(e){}
+
+  // 🐌 مرحله ۲: فقط باقیمانده (کالاها + رمزارزهایی که هیچ‌جا نبودند) — با ۱۲ کانال موازی
+  const rest=state.list.filter(s=>s.t!=="ratio"&&!state.live.map[s.s]);
+  const total=rest.length;let done=0;
+  if(total)$("#liveStatus").textContent=`باقیمانده… 0/${total}`;
+  const queue=[...rest];
+  const workers=Array.from({length:12},async()=>{
+    while(queue.length){const s=queue.shift();
+      if(freshOK(state.live.map[s.s])){state.live.ok++;done++;continue;} // v2.6.1: همین چرخه تازه شده — رد شو
+      const mb=/^([A-Za-z0-9]+)-USD$/i.exec(s.s);
+      let r=null;
+      if(mb)r=await fetchQuoteEx(mb[1].toUpperCase()).catch(()=>null); // v2.6: هر X-USD — حتی PAXG/XAUT کالایی
+      if(!r)r=await fetchCommodityQuote(s.s).catch(()=>null);          // v2.6.6: کالاها یاهو-اول (عدد دقیق سایت یاهو) — توکن طلا فقط جایگزین اضطراری
+      if(!r&&JINA_OK())r=await fetchQuote(s.s,true).catch(()=>null);   // v2.6.8: فقط درصورت سالم‌بودن jina — حالت سریع؛ وگرنه همان ناموفق بهتر از بنِ کامل است
+      if(r){state.live.map[s.s]={price:r.price,prev:r.prev??null,time:r.time||Date.now(),via:r.via||"yahoo"};state.live.ok++;}else state.live.fail++;
+      done++;if(done%8===0||done===total)$("#liveStatus").textContent=`باقیمانده (صرافی/یاهو)… ${done}/${total}`;
+    }});
+  await Promise.all(workers);
+
+  // ➗ مرحله ۳: نسبت‌ها از اجزا
+  state.list.filter(s=>s.t==="ratio").forEach(s=>{const r=ratioComponents(s.s);if(r)state.live.map[s.s]={...r,via:"calc"};});
+
+  const secs=((Date.now()-t0)/1000).toFixed(0);
+  state.live.last=Date.now();state.live.running=false;
+  $("#liveDot").className="dot on";
+  const tm=new Date(state.live.last).toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit"});
+  if(state.live.ok===0&&state.live.fail>0){ // شکست کامل — علت را کاوش کن
+    (async()=>{const probes={};
+      const pl=[["CoinPaprika","https://api.coinpaprika.com/v1/global"],["OKX","https://www.okx.com/api/v5/public/time"],["Coinbase","https://api.exchange.coinbase.com/time"]];
+      for(const [n,u] of pl){try{const r=await fetchT(u,6000);probes[n]=r.ok?"✅":"HTTP"+r.status;}catch(e){probes[n]="❌";}}
+      const msg="اتصال به منابع قیمت ممکن نیست: "+Object.entries(probes).map(([n,v])=>n+" "+v).join(" • ")+" — VPN/فایروال/اینترنت را بررسی کنید";
+      toast(msg,"warn");
+      $("#liveStatus").innerHTML=`⚠️ <b style="color:var(--red)">دریافت قیمت ناموفق</b> — ${Object.entries(probes).map(([n,v])=>n+" "+v).join(" • ")}`;
+      state.live.until=Date.now()+60000; // تلاش مجدد یک دقیقه‌ای
+    })();
+  }
+  const vc={};for(const k in state.live.map){const v=state.live.map[k].via||"?";vc[v]=(vc[v]||0)+1;}
+  const nEx=Object.keys(vc).filter(v=>!["paprika","gecko","mkt","yahoo","jina","r-yahoo","calc","?"].includes(v)).reduce((a,v)=>a+vc[v],0);
+  const nY=(vc.yahoo||0)+(vc.jina||0)+(vc["r-yahoo"]||0); // jina = یاهو از مسیر متن‌خوان؛ r-yahoo = یاهو از اسکریپت R
+  const parts=[];if(nY)parts.push(nY+" یاهو");if(mktHits)parts.push(mktHits+" ⚡فوری");if(nEx)parts.push(nEx+" 🏦صرافی"); // v2.6.7: یاهو اول — مرجع کاربر
+  const ryfNote=rYfStatus==="stale"?" ⏱ live_prices.js قدیمی است — live_prices.R را دوباره اجرا کنید":(rYfStatus==="missing"&&!JINA_OK()?" 💡 راه‌حل قطعی یاهو: live_prices.R را اجرا کنید (README)":"");
+  const jinaNote=!JINA_OK()?" ⚠️ مسیر یاهوی مرورگر محدود شد (سهمیه پراکسی)"+(ryfNote?"":" — تا چرخهٔ بعد"):""; // v2.6.8/2.6.9
+  $("#liveStatus").textContent=`قیمت زنده: ${tm} (${parts.join(" + ")}${state.live.fail?" / "+state.live.fail+" ناموفق":""} • ${secs}ث)${jinaNote}${ryfNote}`;
+  $("#liveStatus").title="جزئیات منابع: "+JSON.stringify(vc)+(state.live.fail?" — ناموفق‌ها معمولاً تیکرهای حذف‌شده/مرده از همه صرافی‌ها هستند":"");
+  state.live.until=Date.now()+state.live.minutes*60000;
+  renderTicker();renderTable();renderSignals();renderRanking();renderAlerts();
+  if(state.sel){const s=state.bySym.get(state.sel);renderStatChips(s);renderBandChips(s);renderIntraday();}
+  if(manual)toast(`بروزرسانی کامل شد در ${secs} ثانیه — ${state.live.ok} قیمت ✔`,"ok");
+  if(state.live.fail>0&&state.live.ok===0)toast("قیمت‌ها دریافت نشد — اتصال/فیلترشکن را بررسی کنید","warn");
+  reloadDataFile();
+}
+function reloadDataFile(){
+  try{const sc=document.createElement("script");
+    sc.src="data.js?v="+Date.now();
+    sc.onload=()=>{try{if(window.DASHBOARD_DATA&&window.DASHBOARD_DATA.meta&&window.DASHBOARD_DATA.meta.run_id!==state.runId){
+      toast("نسخه جدید نتایج مدل شناسایی و بارگذاری شد ✔","ok");initData(window.DASHBOARD_DATA);}}catch(e){}};
+    document.head.appendChild(sc);
+  }catch(e){}
+}
+$("#refreshBtn").addEventListener("click",()=>refreshLive(true));
+$("#liveToggle").addEventListener("change",e=>{
+  state.live.on=e.target.checked;savePrefs();
+  $("#liveDot").className="dot "+(state.live.on?"on":"off");
+  if(state.live.on){state.live.until=Date.now();countTick();}else $("#liveStatus").textContent="قیمت زنده: غیرفعال";
+});
+$("#intervalSel").addEventListener("change",e=>{
+  state.live.minutes=+e.target.value;savePrefs();
+  state.live.until=Date.now()+state.live.minutes*60000;
+});
+function countTick(){
+  if(!state.live.on){$("#countdown").textContent="--:--";return;}
+  const rem=state.live.until-Date.now();
+  if(rem<=0){if(!document.hidden)refreshLive(false);state.live.until=Date.now()+state.live.minutes*60000;return;}
+  const mm=Math.floor(rem/60000),ss=Math.floor(rem%60000/1000);
+  $("#countdown").textContent=String(mm).padStart(2,"0")+":"+String(ss).padStart(2,"0");
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&state.live.on&&Date.now()>state.live.until)refreshLive(false);});
+
+/* ═══════════════ boot + debug/test hook ═══════════════ */
+$("#intervalSel").value=String(state.live.minutes);
+$("#liveToggle").checked=state.live.on;
+$("#thRange").value=state.th;
+if(window.DASHBOARD_DATA&&window.DASHBOARD_DATA.symbols){
+  initData(window.DASHBOARD_DATA);
+}else{
+  $("#emptyState").style.display="block";
+  $("#tickerTrack").innerHTML='<span class="tk"><span class="s">در انتظار data.js …</span></span>';
+}
+setInterval(countTick,1000);
+state.live.until=Date.now()+4000;
+// v2.6.3: هنگام لود، بلافاصله قیمت نماد انتخاب‌شده تازه شود؛ و اگر کلید زنده خاموش است کاربر را راهنمایی کن
+if(!state.live.on)$("#liveStatus").innerHTML=`قیمت زنده: <b style="color:var(--amber)">غیرفعال</b> — کلید «زنده» را روشن کنید یا «🔄 به‌روزرسانی» را بزنید`;
+setTimeout(()=>{(async()=>{await loadLiveYf();
+  if(state.rYfCount){renderTicker();renderTable();renderSignals();const ss=state.bySym.get(state.sel);if(ss){renderStatChips(ss);renderBandChips(ss);}}
+  refreshSymbolPrice(state.sel);})();},600); // v2.6.9: live_prices.js (یاهوی R) قبل از هر چیز
+window.__dash={state,curBands,curWeekRow,tradeSignal,priceOf,signalRows,buildXLSX,zipStore,sessionOf,sigOfPrice,fetchQuoteEx,refreshSymbolPrice,selectSymbol,
+  hourCache,
+  setHourly:(sym,pts)=>{hourCache[sym]={ts:Date.now(),pts};},
+  renderIntraday,renderSignals,renderTable,renderKPIs,refreshUI:()=>{renderTable();renderSignals();renderRanking();renderTicker();renderKPIs();const s=state.bySym.get(state.sel);if(s){renderStatChips(s);renderBandChips(s);}}};
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1eb8905b98bc542',t:'MTc4NDY1MDg1MA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function(e){console.warn('SW failed', e);});
+  });
+}
+</script>
+</body>
+</html>
